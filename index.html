@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Praat Web: La Vaguelette (Final Responsive Fix)</title>
+    <title>Praat Web: La Vaguelette (Final Edition)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
@@ -17,7 +17,8 @@
         .minimize { background: #ffbd2e; cursor: pointer; }
         .maximize { background: #27c93f; }
         .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
-        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; flex-wrap: wrap; flex-shrink: 0; }
+        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+        .menu-bar::-webkit-scrollbar { display: none; }
         .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; display: inline-block; }
         .menu-item:hover { background: #007aff; color: #fff; }
         .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f0f0f0; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-direction: column; min-width: 200px; z-index: 201; }
@@ -51,7 +52,7 @@
         .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eee; gap: 10px; }
         .data-val { font-weight: 600; color: #d35400; font-family: monospace; white-space: nowrap; }
         .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
-        #audioInput { display: none; }
+        .file-inputs { display: none; }
     </style>
 </head>
 <body>
@@ -62,7 +63,14 @@
         </div>
 
         <div class="menu-bar">
-            <div class="menu-item" onclick="document.getElementById('audioInput').click()">File (Open)</div>
+            <div class="menu-item">File
+                <div class="dropdown">
+                    <div class="drop-item" onclick="document.getElementById('audioInput').click()"><span>Open Audio...</span></div>
+                    <div class="drop-item" onclick="document.getElementById('projectInput').click()"><span>Open Project (.json)...</span></div>
+                    <div class="drop-item" style="border-top: 1px solid #ccc; margin-top: 4px;" onclick="saveTextGrid()"><span>Save as TextGrid...</span></div>
+                    <div class="drop-item" onclick="saveProject()"><span>Save Project (.json)...</span></div>
+                </div>
+            </div>
             <div class="menu-item">Edit</div>
             <div class="menu-item">Play
                 <div class="dropdown">
@@ -72,6 +80,7 @@
             <div class="menu-item">Boundary
                 <div class="dropdown">
                     <div class="drop-item" onclick="addBoundary()"><span>Add on selected tier</span><span class="shortcut">Enter</span></div>
+                    <div class="drop-item" onclick="removeBoundary()"><span>Remove</span><span class="shortcut">Alt-Backspace</span></div>
                 </div>
             </div>
             <div class="menu-item">Tier</div>
@@ -131,16 +140,20 @@
             </div>
         </div>
 
-        <input type="file" id="audioInput" accept="audio/*">
-        <input type="text" id="hiddenInput" class="hidden-input">
+        <div class="file-inputs">
+            <input type="file" id="audioInput" accept="audio/*">
+            <input type="file" id="projectInput" accept=".json">
+            <input type="text" id="hiddenInput" class="hidden-input">
+        </div>
     </div>
 
     <script>
+        // Utilities for mouse & touch
         function getClientX(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX; }
         function getClientY(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY; }
         function getOffsetX(e, elem) { if(e.touches && e.touches.length > 0) { const rect = elem.getBoundingClientRect(); return e.touches[0].clientX - rect.left; } return e.offsetX; }
 
-        const audioInput = document.getElementById('audioInput'), container = document.getElementById('canvasContainer');
+        const container = document.getElementById('canvasContainer');
         const bgCanvas = document.getElementById('bgCanvas'), wCtx = document.getElementById('waveformCanvas').getContext('2d');
         const sCtx = document.getElementById('spectrogramCanvas').getContext('2d'), tCtx = document.getElementById('textgridCanvas').getContext('2d');
         const iCtx = document.getElementById('interactionCanvas').getContext('2d'), intCanvas = document.getElementById('interactionCanvas');
@@ -150,6 +163,17 @@
         let viewStart = 0, viewEnd = 1, totalDur = 1, viewHistory = [], viewNeedsFullRender = true;
         let selectionType = 'none', selStart = 0, selEnd = 0, cursorPos = null, activeIntervalIndex = -1, boundaries = [], sourceNode = null, isDraggingInteraction = false;
 
+        // Auto-save logic
+        function saveToLocal() { if(boundaries.length >= 2) localStorage.setItem('praat_web_autosave', JSON.stringify({b: boundaries, d: totalDur})); }
+        function loadFromLocal() {
+            let saved = localStorage.getItem('praat_web_autosave');
+            if(saved) {
+                let data = JSON.parse(saved);
+                if(Math.abs(data.d - totalDur) < 0.1) { boundaries = data.b; requestAnimationFrame(renderEngine); }
+            }
+        }
+
+        // Floating Panels Dragging Logic
         function setupPanelDrag(headerId, panelId) {
             const header = document.getElementById(headerId), panel = document.getElementById(panelId);
             let isDragging = false, dragOffsetX, dragOffsetY;
@@ -169,7 +193,8 @@
         }
         window.addEventListener('resize', resize);
 
-        audioInput.addEventListener('change', e => {
+        // File Management
+        document.getElementById('audioInput').addEventListener('change', e => {
             if (!e.target.files[0]) return;
             const reader = new FileReader();
             reader.onload = ev => {
@@ -181,12 +206,45 @@
                     viewHistory = [{s: viewStart, e: viewEnd}];
                     boundaries = [{time: 0, label: ""}, {time: totalDur, label: ""}];
                     document.getElementById('t-total').innerText = `Total ${totalDur.toFixed(6)} s`;
-                    updateScrollbar(); resize();
+                    loadFromLocal(); updateScrollbar(); resize();
                 });
             };
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
+        document.getElementById('projectInput').addEventListener('change', e => {
+            if(!e.target.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if(data.boundaries) { boundaries = data.boundaries; saveToLocal(); requestAnimationFrame(renderEngine); }
+                } catch(err) { alert("Invalid Project File!"); }
+            };
+            reader.readAsText(e.target.files[0]);
+        });
+
+        function saveProject() {
+            if(boundaries.length === 0) return;
+            const projectData = { boundaries: boundaries, totalDur: totalDur };
+            const blob = new Blob([JSON.stringify(projectData)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'La_Vaguelette_Project.json'; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function saveTextGrid() {
+            if(!audioBuffer || boundaries.length < 2) return;
+            let str = 'File type = "ooTextFile"\nObject class = "TextGrid"\n\n';
+            str += `xmin = 0\nxmax = ${totalDur}\ntiers? <exists>\nsize = 1\nitem []:\n    item [1]:\n        class = "IntervalTier"\n        name = "Vokal"\n        xmin = 0\n        xmax = ${totalDur}\n        intervals: size = ${boundaries.length - 1}\n`;
+            for(let i=0; i<boundaries.length-1; i++) {
+                str += `        intervals [${i+1}]:\n            xmin = ${boundaries[i].time}\n            xmax = ${boundaries[i+1].time}\n            text = "${boundaries[i].label}"\n`;
+            }
+            const blob = new Blob([str], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'La_Vaguelette_Vocals.TextGrid'; a.click(); URL.revokeObjectURL(url);
+        }
+
+        // DSP & FFT
         function performFFT(re, im) {
             const n = re.length, shift = Math.log2(n);
             for (let i = 0; i < n; i++) { let j = 0, x = i; for (let k = 0; k < shift; k++) { j = (j << 1) | (x & 1); x >>= 1; } if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
@@ -243,14 +301,12 @@
                 bg.fillStyle = '#0000ff'; bg.fillText('- - derived pitch', w/2 + 120, waveH + 15);
                 bg.fillStyle = '#008080'; bg.fillText('modifiable TextGrid', w/2 + 160, waveH + specH - 5);
             }
-            
             bg.fillStyle = '#fff'; bg.fillRect(50, waveH+specH+20, w-60, tgH-40);
         }
 
         function renderEngine() {
             if(!audioBuffer) return;
-            const w = wCtx.canvas.width, h = wCtx.canvas.height, waveH = h * 0.4, specH = h * 0.4, tgH = h * 0.2;
-            const dur = viewEnd - viewStart;
+            const w = wCtx.canvas.width, h = wCtx.canvas.height, waveH = h * 0.4, specH = h * 0.4, tgH = h * 0.2, dur = viewEnd - viewStart;
 
             if (viewNeedsFullRender) {
                 document.getElementById('t-left').innerText = viewStart.toFixed(6); document.getElementById('t-right').innerText = viewEnd.toFixed(6); document.getElementById('t-visible').innerText = `Visible part ${dur.toFixed(6)} s`;
@@ -259,7 +315,6 @@
                 wCtx.clearRect(0,0,w,h); wCtx.fillStyle = '#333';
                 const sIdx = Math.floor(viewStart * audioBuffer.sampleRate), eIdx = Math.floor(viewEnd * audioBuffer.sampleRate), specW = w - 50;
                 const step = Math.max(1, Math.ceil((eIdx - sIdx) / specW)), chH = waveH / numChannels;
-                
                 for(let c=0; c<numChannels; c++) {
                     const data = channelData[c];
                     for(let i = 0; i < specW; i++) {
@@ -381,17 +436,35 @@
         intCanvas.addEventListener('keydown', e => {
             if(!audioBuffer) return;
             if(e.key === 'Tab') { e.preventDefault(); playAudio(); } else if(e.key === 'Enter') { e.preventDefault(); addBoundary(); }
+            else if(e.altKey && e.key === 'Backspace') { e.preventDefault(); removeBoundary(); }
             else if(e.key.length === 1 || e.key === 'Backspace') { if(selectionType === 'interval') hiddenInput.focus(); }
         });
-        hiddenInput.addEventListener('input', () => { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label = hiddenInput.value; requestAnimationFrame(renderEngine); } });
-        function addIPA(char) { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label += char; hiddenInput.value = boundaries[activeIntervalIndex].label; requestAnimationFrame(renderEngine); intCanvas.focus(); } }
+        hiddenInput.addEventListener('input', () => { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label = hiddenInput.value; saveToLocal(); requestAnimationFrame(renderEngine); } });
+        function addIPA(char) { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label += char; hiddenInput.value = boundaries[activeIntervalIndex].label; saveToLocal(); requestAnimationFrame(renderEngine); intCanvas.focus(); } }
 
         function addBoundary() {
             if(selectionType === 'time') {
                 let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd); boundaries.push({time: t1, label: ""}); boundaries.push({time: t2, label: ""}); boundaries.sort((a,b)=>a.time - b.time);
                 for(let i=0; i<boundaries.length-1; i++) { if(Math.abs(boundaries[i].time - t1) < 0.0001) { activeIntervalIndex = i; selectionType = 'interval'; hiddenInput.value = boundaries[i].label; hiddenInput.focus(); break; } }
             } else if (cursorPos !== null) { boundaries.push({time: cursorPos, label: ""}); boundaries.sort((a,b)=>a.time - b.time); for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
-            requestAnimationFrame(renderEngine);
+            saveToLocal(); requestAnimationFrame(renderEngine);
+        }
+
+        function removeBoundary() {
+            if(cursorPos === null && selStart === null) return;
+            let targetTime = (selectionType === 'interval' && activeIntervalIndex !== -1) ? boundaries[activeIntervalIndex].time : cursorPos;
+            if (targetTime === null) targetTime = Math.min(selStart, selEnd);
+            
+            let closestIdx = -1; let minDist = Infinity;
+            for(let i=1; i<boundaries.length-1; i++) {
+                let dist = Math.abs(boundaries[i].time - targetTime);
+                if(dist < minDist) { minDist = dist; closestIdx = i; }
+            }
+            if(closestIdx !== -1 && minDist < 0.2) {
+                boundaries.splice(closestIdx, 1); boundaries.sort((a,b)=>a.time - b.time);
+                activeIntervalIndex = -1; hiddenInput.value = ""; selectionType = 'none';
+                saveToLocal(); requestAnimationFrame(renderEngine);
+            }
         }
 
         function calcAcoustics() {
