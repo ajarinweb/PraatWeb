@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Praat Web: La Vaguelette (Final UX Edition)</title>
+    <title>Praat Web: La Vaguelette (Absolute Final Edition)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
@@ -17,8 +17,7 @@
         .minimize { background: #ffbd2e; cursor: pointer; }
         .maximize { background: #27c93f; }
         .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
-        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
-        .menu-bar::-webkit-scrollbar { display: none; }
+        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; flex-wrap: wrap; flex-shrink: 0; }
         .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; display: inline-block; }
         .menu-item:hover, .menu-item.active-menu { background: #007aff; color: #fff; border-radius: 4px; }
         .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f0f0f0; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-direction: column; min-width: 200px; z-index: 201; border-radius: 4px; }
@@ -57,7 +56,6 @@
         .ipa-btn:hover { background: #007aff; color: #fff; border-color: #007aff; }
         .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eee; gap: 10px; }
         .data-val { font-weight: 600; color: #d35400; font-family: monospace; white-space: nowrap; }
-        .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
         .file-inputs { display: none; }
     </style>
 </head>
@@ -156,7 +154,7 @@
             </div>
         </div>
 
-        <div class="floating-panel" id="dataPanel" style="top: 400px; right: 10px; width: 250px;">
+        <div class="floating-panel" id="dataPanel" style="top: 280px; right: 10px; width: 250px;">
             <div class="panel-header" id="dataDrag">
                 <span>Acoustic Data</span><div class="light minimize" onclick="togglePanel('dataContent')"></div>
             </div>
@@ -175,7 +173,7 @@
     </div>
 
     <script>
-        // Fix Menu Bar Dropdown for Touch & Desktop
+        // Menu Bar Dropdown Fix for Touch & Desktop
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', e => {
                 const isActive = item.classList.contains('active-menu');
@@ -201,10 +199,8 @@
         let viewStart = 0, viewEnd = 1, totalDur = 1, viewHistory = [], viewNeedsFullRender = true;
         let selectionType = 'none', selStart = 0, selEnd = 0, cursorPos = null, activeIntervalIndex = -1, boundaries = [], sourceNode = null, isDraggingInteraction = false;
         
-        // Playhead variables
         let playheadReq = null, playStartTime = 0, playStartOffset = 0, playDuration = 0, isPlaying = false;
 
-        // Auto-save logic
         function saveToLocal() { if(boundaries.length >= 2) localStorage.setItem('praat_web_autosave', JSON.stringify({b: boundaries, d: totalDur})); }
         function loadFromLocal() {
             let saved = localStorage.getItem('praat_web_autosave');
@@ -214,7 +210,6 @@
             }
         }
 
-        // Floating Panels Dragging Logic
         function setupPanelDrag(headerId, panelId) {
             const header = document.getElementById(headerId), panel = document.getElementById(panelId);
             let isDragging = false, dragOffsetX, dragOffsetY;
@@ -234,7 +229,6 @@
         }
         window.addEventListener('resize', resize);
 
-        // File Management
         document.getElementById('audioInput').addEventListener('change', e => {
             if (!e.target.files[0]) return;
             const reader = new FileReader();
@@ -285,7 +279,6 @@
             const a = document.createElement('a'); a.href = url; a.download = 'La_Vaguelette_Vocals.TextGrid'; a.click(); URL.revokeObjectURL(url);
         }
 
-        // DSP & FFT
         function performFFT(re, im) {
             const n = re.length, shift = Math.log2(n);
             for (let i = 0; i < n; i++) { let j = 0, x = i; for (let k = 0; k < shift; k++) { j = (j << 1) | (x & 1); x >>= 1; } if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
@@ -450,7 +443,6 @@
                 if(px2 <= w) { iCtx.moveTo(px2, 0); iCtx.lineTo(px2, waveH+specH); }
                 iCtx.stroke(); iCtx.setLineDash([]);
                 
-                // Time indicators for selection
                 iCtx.fillStyle = 'red'; iCtx.font = '12px "Times New Roman"'; iCtx.textAlign = 'center';
                 if(px1 >= 50) iCtx.fillText(t1.toFixed(6), px1, 15);
                 if(px2 <= w) iCtx.fillText(t2.toFixed(6), px2, 15);
@@ -464,7 +456,6 @@
                 }
             }
             
-            // Draw Playhead
             if(isPlaying) {
                 let currentOffset = playStartOffset + (audioCtx.currentTime - playStartTime);
                 if(currentOffset <= playStartOffset + playDuration) {
@@ -496,7 +487,6 @@
         intCanvas.addEventListener('mousedown', handleInteractStart); intCanvas.addEventListener('mousemove', handleInteractMove); intCanvas.addEventListener('mouseup', handleInteractEnd);
         intCanvas.addEventListener('touchstart', handleInteractStart, {passive: true}); intCanvas.addEventListener('touchmove', handleInteractMove, {passive: true}); intCanvas.addEventListener('touchend', handleInteractEnd);
 
-        // Direct Keyboard Input Binding
         intCanvas.addEventListener('keydown', e => {
             if(!audioBuffer) return;
             if(e.key === 'Tab') { e.preventDefault(); playAudio(); } 
@@ -507,7 +497,7 @@
                     boundaries[activeIntervalIndex].label = boundaries[activeIntervalIndex].label.slice(0, -1);
                     saveToLocal(); requestAnimationFrame(renderEngine);
                 } else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-                    if(e.key === ' ') e.preventDefault(); // Mencegah spasi dari scroll layar
+                    if(e.key === ' ') e.preventDefault(); 
                     boundaries[activeIntervalIndex].label += e.key;
                     saveToLocal(); requestAnimationFrame(renderEngine);
                 }
@@ -562,9 +552,7 @@
         }
 
         function animatePlayhead() {
-            if(!isPlaying) return;
-            requestAnimationFrame(renderEngine);
-            playheadReq = requestAnimationFrame(animatePlayhead);
+            if(!isPlaying) return; requestAnimationFrame(renderEngine); playheadReq = requestAnimationFrame(animatePlayhead);
         }
 
         function saveView() { viewHistory.push({s: viewStart, e: viewEnd}); }
@@ -575,11 +563,9 @@
         function zoomBak() { if(viewHistory.length > 0) { let v = viewHistory.pop(); viewStart = v.s; viewEnd = v.e; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } }
 
         function stepScroll(dir) {
-            if(!totalDur) return;
-            let dur = viewEnd - viewStart; let shift = dur * 0.1 * dir;
+            if(!totalDur) return; let dur = viewEnd - viewStart; let shift = dur * 0.1 * dir;
             viewStart += shift; viewEnd += shift;
-            if(viewStart < 0) { viewStart = 0; viewEnd = dur; }
-            if(viewEnd > totalDur) { viewEnd = totalDur; viewStart = totalDur - dur; }
+            if(viewStart < 0) { viewStart = 0; viewEnd = dur; } if(viewEnd > totalDur) { viewEnd = totalDur; viewStart = totalDur - dur; }
             updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine);
         }
 
