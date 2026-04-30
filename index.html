@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Praat Web: La Vaguelette (Final Menu Fix)</title>
+    <title>Praat Web: La Vaguelette (IPA & Keyboard Fix)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
@@ -44,13 +44,16 @@
         .panel-header { padding: 8px 10px; background: rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 0.8rem; font-weight: 600; text-align: center; cursor: grab; display: flex; justify-content: space-between; align-items: center; touch-action: none; }
         .panel-header:active { cursor: grabbing; }
         .panel-content { padding: 10px; display: block; }
+        .ipa-scroll-area { max-height: 250px; overflow-y: auto; padding-right: 5px; }
+        .ipa-scroll-area::-webkit-scrollbar { width: 6px; }
+        .ipa-scroll-area::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
         .hidden-content { display: none; }
-        .ipa-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-        .ipa-btn { background: #fff; border: 1px solid #ccc; padding: 8px 0; font-size: 1.2rem; font-family: "Times New Roman", serif; text-align: center; border-radius: 4px; cursor: pointer; touch-action: manipulation; }
+        .ipa-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin-bottom: 10px; }
+        .ipa-section-title { font-size: 0.75rem; color: #555; font-weight: bold; margin-bottom: 5px; margin-top: 5px; }
+        .ipa-btn { background: #fff; border: 1px solid #ccc; padding: 6px 0; font-size: 1.2rem; font-family: "Times New Roman", serif; text-align: center; border-radius: 4px; cursor: pointer; touch-action: manipulation; }
         .ipa-btn:hover { background: #007aff; color: #fff; border-color: #007aff; }
         .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eee; gap: 10px; }
         .data-val { font-weight: 600; color: #d35400; font-family: monospace; white-space: nowrap; }
-        .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
         .file-inputs { display: none; }
     </style>
 </head>
@@ -114,20 +117,40 @@
             </div>
         </div>
 
-        <div class="floating-panel" id="ipaPanel" style="top: 50px; right: 20px; width: 250px;">
+        <div class="floating-panel" id="ipaPanel" style="top: 40px; right: 10px; width: 340px;">
             <div class="panel-header" id="ipaDrag">
-                <span>IPA (French)</span><div class="light minimize" onclick="togglePanel('ipaContent')"></div>
+                <span>Standard IPA Palette</span><div class="light minimize" onclick="togglePanel('ipaContent')"></div>
             </div>
             <div class="panel-content" id="ipaContent">
-                <div class="ipa-grid">
-                    <div class="ipa-btn" onclick="addIPA('e')">e</div><div class="ipa-btn" onclick="addIPA('ɛ')">ɛ</div><div class="ipa-btn" onclick="addIPA('a')">a</div><div class="ipa-btn" onclick="addIPA('ɑ')">ɑ</div><div class="ipa-btn" onclick="addIPA('ɔ')">ɔ</div>
-                    <div class="ipa-btn" onclick="addIPA('o')">o</div><div class="ipa-btn" onclick="addIPA('u')">u</div><div class="ipa-btn" onclick="addIPA('y')">y</div><div class="ipa-btn" onclick="addIPA('ø')">ø</div><div class="ipa-btn" onclick="addIPA('œ')">œ</div>
-                    <div class="ipa-btn" onclick="addIPA('ə')">ə</div><div class="ipa-btn" onclick="addIPA('ɛ̃')">ɛ̃</div><div class="ipa-btn" onclick="addIPA('ɑ̃')">ɑ̃</div><div class="ipa-btn" onclick="addIPA('ɔ̃')">ɔ̃</div><div class="ipa-btn" onclick="addIPA('œ̃')">œ̃</div>
+                <div class="ipa-scroll-area">
+                    <div class="ipa-section-title">Vowels</div>
+                    <div class="ipa-grid">
+                        <div class="ipa-btn" onclick="addIPA('i')">i</div><div class="ipa-btn" onclick="addIPA('y')">y</div><div class="ipa-btn" onclick="addIPA('ɨ')">ɨ</div><div class="ipa-btn" onclick="addIPA('ʉ')">ʉ</div><div class="ipa-btn" onclick="addIPA('ɯ')">ɯ</div><div class="ipa-btn" onclick="addIPA('u')">u</div><div class="ipa-btn" onclick="addIPA('ɪ')">ɪ</div><div class="ipa-btn" onclick="addIPA('ʏ')">ʏ</div>
+                        <div class="ipa-btn" onclick="addIPA('ʊ')">ʊ</div><div class="ipa-btn" onclick="addIPA('e')">e</div><div class="ipa-btn" onclick="addIPA('ø')">ø</div><div class="ipa-btn" onclick="addIPA('ɘ')">ɘ</div><div class="ipa-btn" onclick="addIPA('ɵ')">ɵ</div><div class="ipa-btn" onclick="addIPA('ɤ')">ɤ</div><div class="ipa-btn" onclick="addIPA('o')">o</div><div class="ipa-btn" onclick="addIPA('ə')">ə</div>
+                        <div class="ipa-btn" onclick="addIPA('ɛ')">ɛ</div><div class="ipa-btn" onclick="addIPA('œ')">œ</div><div class="ipa-btn" onclick="addIPA('ɜ')">ɜ</div><div class="ipa-btn" onclick="addIPA('ɞ')">ɞ</div><div class="ipa-btn" onclick="addIPA('ʌ')">ʌ</div><div class="ipa-btn" onclick="addIPA('ɔ')">ɔ</div><div class="ipa-btn" onclick="addIPA('æ')">æ</div><div class="ipa-btn" onclick="addIPA('ɐ')">ɐ</div>
+                        <div class="ipa-btn" onclick="addIPA('a')">a</div><div class="ipa-btn" onclick="addIPA('ɶ')">ɶ</div><div class="ipa-btn" onclick="addIPA('ɑ')">ɑ</div><div class="ipa-btn" onclick="addIPA('ɒ')">ɒ</div>
+                    </div>
+                    <div class="ipa-section-title">Consonants</div>
+                    <div class="ipa-grid">
+                        <div class="ipa-btn" onclick="addIPA('p')">p</div><div class="ipa-btn" onclick="addIPA('b')">b</div><div class="ipa-btn" onclick="addIPA('t')">t</div><div class="ipa-btn" onclick="addIPA('d')">d</div><div class="ipa-btn" onclick="addIPA('ʈ')">ʈ</div><div class="ipa-btn" onclick="addIPA('ɖ')">ɖ</div><div class="ipa-btn" onclick="addIPA('c')">c</div><div class="ipa-btn" onclick="addIPA('ɟ')">ɟ</div>
+                        <div class="ipa-btn" onclick="addIPA('k')">k</div><div class="ipa-btn" onclick="addIPA('ɡ')">ɡ</div><div class="ipa-btn" onclick="addIPA('q')">q</div><div class="ipa-btn" onclick="addIPA('ɢ')">ɢ</div><div class="ipa-btn" onclick="addIPA('ʔ')">ʔ</div><div class="ipa-btn" onclick="addIPA('m')">m</div><div class="ipa-btn" onclick="addIPA('ɱ')">ɱ</div><div class="ipa-btn" onclick="addIPA('n')">n</div>
+                        <div class="ipa-btn" onclick="addIPA('ɳ')">ɳ</div><div class="ipa-btn" onclick="addIPA('ɲ')">ɲ</div><div class="ipa-btn" onclick="addIPA('ŋ')">ŋ</div><div class="ipa-btn" onclick="addIPA('ɴ')">ɴ</div><div class="ipa-btn" onclick="addIPA('ʙ')">ʙ</div><div class="ipa-btn" onclick="addIPA('r')">r</div><div class="ipa-btn" onclick="addIPA('ʀ')">ʀ</div><div class="ipa-btn" onclick="addIPA('ⱱ')">ⱱ</div>
+                        <div class="ipa-btn" onclick="addIPA('ɾ')">ɾ</div><div class="ipa-btn" onclick="addIPA('ɽ')">ɽ</div><div class="ipa-btn" onclick="addIPA('ɸ')">ɸ</div><div class="ipa-btn" onclick="addIPA('β')">β</div><div class="ipa-btn" onclick="addIPA('f')">f</div><div class="ipa-btn" onclick="addIPA('v')">v</div><div class="ipa-btn" onclick="addIPA('θ')">θ</div><div class="ipa-btn" onclick="addIPA('ð')">ð</div>
+                        <div class="ipa-btn" onclick="addIPA('s')">s</div><div class="ipa-btn" onclick="addIPA('z')">z</div><div class="ipa-btn" onclick="addIPA('ʃ')">ʃ</div><div class="ipa-btn" onclick="addIPA('ʒ')">ʒ</div><div class="ipa-btn" onclick="addIPA('ʂ')">ʂ</div><div class="ipa-btn" onclick="addIPA('ʐ')">ʐ</div><div class="ipa-btn" onclick="addIPA('ç')">ç</div><div class="ipa-btn" onclick="addIPA('ʝ')">ʝ</div>
+                        <div class="ipa-btn" onclick="addIPA('x')">x</div><div class="ipa-btn" onclick="addIPA('ɣ')">ɣ</div><div class="ipa-btn" onclick="addIPA('χ')">χ</div><div class="ipa-btn" onclick="addIPA('ʁ')">ʁ</div><div class="ipa-btn" onclick="addIPA('ħ')">ħ</div><div class="ipa-btn" onclick="addIPA('ʕ')">ʕ</div><div class="ipa-btn" onclick="addIPA('h')">h</div><div class="ipa-btn" onclick="addIPA('ɦ')">ɦ</div>
+                        <div class="ipa-btn" onclick="addIPA('ɬ')">ɬ</div><div class="ipa-btn" onclick="addIPA('ɮ')">ɮ</div><div class="ipa-btn" onclick="addIPA('ʋ')">ʋ</div><div class="ipa-btn" onclick="addIPA('ɹ')">ɹ</div><div class="ipa-btn" onclick="addIPA('ɻ')">ɻ</div><div class="ipa-btn" onclick="addIPA('j')">j</div><div class="ipa-btn" onclick="addIPA('ɰ')">ɰ</div><div class="ipa-btn" onclick="addIPA('l')">l</div>
+                        <div class="ipa-btn" onclick="addIPA('ɭ')">ɭ</div><div class="ipa-btn" onclick="addIPA('ʎ')">ʎ</div><div class="ipa-btn" onclick="addIPA('ʟ')">ʟ</div>
+                    </div>
+                    <div class="ipa-section-title">Diacritics & Suprasegmentals</div>
+                    <div class="ipa-grid">
+                        <div class="ipa-btn" onclick="addIPA('ˈ')">ˈ</div><div class="ipa-btn" onclick="addIPA('ˌ')">ˌ</div><div class="ipa-btn" onclick="addIPA('ː')">ː</div><div class="ipa-btn" onclick="addIPA('ˑ')">ˑ</div><div class="ipa-btn" onclick="addIPA('̃')">◌̃</div><div class="ipa-btn" onclick="addIPA('˔')">˔</div><div class="ipa-btn" onclick="addIPA('˕')">˕</div><div class="ipa-btn" onclick="addIPA('̥')">̥</div>
+                        <div class="ipa-btn" onclick="addIPA('̬')">̬</div><div class="ipa-btn" onclick="addIPA('ɛ̃')">ɛ̃</div><div class="ipa-btn" onclick="addIPA('ɑ̃')">ɑ̃</div><div class="ipa-btn" onclick="addIPA('ɔ̃')">ɔ̃</div><div class="ipa-btn" onclick="addIPA('œ̃')">œ̃</div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="floating-panel" id="dataPanel" style="top: 280px; right: 20px; width: 250px;">
+        <div class="floating-panel" id="dataPanel" style="top: 400px; right: 10px; width: 250px;">
             <div class="panel-header" id="dataDrag">
                 <span>Acoustic Data</span><div class="light minimize" onclick="togglePanel('dataContent')"></div>
             </div>
@@ -142,7 +165,6 @@
         <div class="file-inputs">
             <input type="file" id="audioInput" accept="audio/*">
             <input type="file" id="projectInput" accept=".json">
-            <input type="text" id="hiddenInput" class="hidden-input">
         </div>
     </div>
 
@@ -168,7 +190,6 @@
         const bgCanvas = document.getElementById('bgCanvas'), wCtx = document.getElementById('waveformCanvas').getContext('2d');
         const sCtx = document.getElementById('spectrogramCanvas').getContext('2d'), tCtx = document.getElementById('textgridCanvas').getContext('2d');
         const iCtx = document.getElementById('interactionCanvas').getContext('2d'), intCanvas = document.getElementById('interactionCanvas');
-        const hiddenInput = document.getElementById('hiddenInput');
 
         let audioCtx, audioBuffer, channelData = [], numChannels = 1;
         let viewStart = 0, viewEnd = 1, totalDur = 1, viewHistory = [], viewNeedsFullRender = true;
@@ -437,27 +458,43 @@
         }
         function handleInteractEnd() {
             if(!isDraggingInteraction) return; isDraggingInteraction = false; 
-            if (selectionType !== 'time') { selectionType = 'interval'; for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
+            if (selectionType !== 'time') { selectionType = 'interval'; for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; break; } } }
             calcAcoustics(); requestAnimationFrame(renderEngine); 
         }
 
         intCanvas.addEventListener('mousedown', handleInteractStart); intCanvas.addEventListener('mousemove', handleInteractMove); intCanvas.addEventListener('mouseup', handleInteractEnd);
         intCanvas.addEventListener('touchstart', handleInteractStart, {passive: true}); intCanvas.addEventListener('touchmove', handleInteractMove, {passive: true}); intCanvas.addEventListener('touchend', handleInteractEnd);
 
+        // Direct Keyboard Input Binding
         intCanvas.addEventListener('keydown', e => {
             if(!audioBuffer) return;
-            if(e.key === 'Tab') { e.preventDefault(); playAudio(); } else if(e.key === 'Enter') { e.preventDefault(); addBoundary(); }
+            if(e.key === 'Tab') { e.preventDefault(); playAudio(); } 
+            else if(e.key === 'Enter') { e.preventDefault(); addBoundary(); }
             else if(e.altKey && e.key === 'Backspace') { e.preventDefault(); removeBoundary(); }
-            else if(e.key.length === 1 || e.key === 'Backspace') { if(selectionType === 'interval') hiddenInput.focus(); }
+            else if(selectionType === 'interval' && activeIntervalIndex !== -1) {
+                if(e.key === 'Backspace') {
+                    boundaries[activeIntervalIndex].label = boundaries[activeIntervalIndex].label.slice(0, -1);
+                    saveToLocal(); requestAnimationFrame(renderEngine);
+                } else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                    if(e.key === ' ') e.preventDefault(); // Mencegah spasi dari scroll layar
+                    boundaries[activeIntervalIndex].label += e.key;
+                    saveToLocal(); requestAnimationFrame(renderEngine);
+                }
+            }
         });
-        hiddenInput.addEventListener('input', () => { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label = hiddenInput.value; saveToLocal(); requestAnimationFrame(renderEngine); } });
-        function addIPA(char) { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label += char; hiddenInput.value = boundaries[activeIntervalIndex].label; saveToLocal(); requestAnimationFrame(renderEngine); intCanvas.focus(); } }
+
+        function addIPA(char) { 
+            if(selectionType === 'interval' && activeIntervalIndex !== -1) { 
+                boundaries[activeIntervalIndex].label += char; 
+                saveToLocal(); requestAnimationFrame(renderEngine); intCanvas.focus(); 
+            } 
+        }
 
         function addBoundary() {
             if(selectionType === 'time') {
                 let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd); boundaries.push({time: t1, label: ""}); boundaries.push({time: t2, label: ""}); boundaries.sort((a,b)=>a.time - b.time);
-                for(let i=0; i<boundaries.length-1; i++) { if(Math.abs(boundaries[i].time - t1) < 0.0001) { activeIntervalIndex = i; selectionType = 'interval'; hiddenInput.value = boundaries[i].label; hiddenInput.focus(); break; } }
-            } else if (cursorPos !== null) { boundaries.push({time: cursorPos, label: ""}); boundaries.sort((a,b)=>a.time - b.time); for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
+                for(let i=0; i<boundaries.length-1; i++) { if(Math.abs(boundaries[i].time - t1) < 0.0001) { activeIntervalIndex = i; selectionType = 'interval'; break; } }
+            } else if (cursorPos !== null) { boundaries.push({time: cursorPos, label: ""}); boundaries.sort((a,b)=>a.time - b.time); for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; break; } } }
             saveToLocal(); requestAnimationFrame(renderEngine);
         }
 
@@ -467,7 +504,7 @@
             if (targetTime === null) targetTime = Math.min(selStart, selEnd);
             let closestIdx = -1; let minDist = Infinity;
             for(let i=1; i<boundaries.length-1; i++) { let dist = Math.abs(boundaries[i].time - targetTime); if(dist < minDist) { minDist = dist; closestIdx = i; } }
-            if(closestIdx !== -1 && minDist < 0.2) { boundaries.splice(closestIdx, 1); boundaries.sort((a,b)=>a.time - b.time); activeIntervalIndex = -1; hiddenInput.value = ""; selectionType = 'none'; saveToLocal(); requestAnimationFrame(renderEngine); }
+            if(closestIdx !== -1 && minDist < 0.2) { boundaries.splice(closestIdx, 1); boundaries.sort((a,b)=>a.time - b.time); activeIntervalIndex = -1; selectionType = 'none'; saveToLocal(); requestAnimationFrame(renderEngine); }
         }
 
         function calcAcoustics() {
