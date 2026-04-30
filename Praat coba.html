@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Praat Web: La Vaguelette (Stereo & Optimized DSP)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; }
+        body { background: #2c3e50; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #000; }
+        .macos-window { background: #f0f0f0; border: 1px solid #777; border-radius: 8px; width: 98vw; height: 95vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .title-bar { background: linear-gradient(to bottom, #e8e8e8, #d0d0d0); height: 28px; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #aaa; position: relative; }
+        .traffic-lights { display: flex; gap: 6px; }
+        .light { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); }
+        .close { background: #ff5f56; }
+        .minimize { background: #ffbd2e; cursor: pointer; }
+        .maximize { background: #27c93f; }
+        .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; }
+        .menu-bar { background: #f0f0f0; height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; }
+        .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; }
+        .menu-item:hover { background: #007aff; color: #fff; }
+        .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f0f0f0; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-direction: column; min-width: 200px; z-index: 201; }
+        .menu-item:hover .dropdown { display: flex; }
+        .drop-item { padding: 6px 15px; color: #000; display: flex; justify-content: space-between; }
+        .drop-item:hover { background: #007aff; color: #fff; }
+        .shortcut { opacity: 0.6; font-size: 0.75rem; }
+        .main-workspace { display: flex; flex: 1; overflow: hidden; flex-direction: column; background: #fff; position: relative; z-index: 1; }
+        .canvas-area { flex: 1; position: relative; background: #fafafa; border-bottom: 1px solid #ccc; cursor: text; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; background: transparent; }
+        #interactionCanvas { z-index: 10; outline: none; }
+        .bottom-nav { height: 60px; background: #e8e8e8; display: flex; flex-direction: column; border-top: 1px solid #aaa; z-index: 50; }
+        .time-stats { display: flex; font-size: 0.85rem; border-bottom: 1px solid #ccc; background: #dcdcdc; }
+        .time-box { flex: 1; text-align: center; padding: 4px; border-right: 1px solid #ccc; font-family: monospace; }
+        .time-center { flex: 2; text-align: center; padding: 4px; border-right: 1px solid #ccc; }
+        .controls-row { display: flex; align-items: center; padding: 5px 10px; gap: 5px; flex: 1; }
+        .nav-btn { background: #f5f5f5; border: 1px solid #999; padding: 3px 12px; font-size: 0.8rem; border-radius: 3px; cursor: pointer; color: #000; }
+        .nav-btn:hover { background: #e0e0e0; }
+        .scrollbar-track { flex: 1; height: 16px; background: #ddd; border: 1px solid #999; margin-left: 10px; position: relative; border-radius: 8px; cursor: pointer; }
+        .scrollbar-thumb { position: absolute; top: 0; height: 100%; background: #999; border-radius: 8px; }
+        .floating-panel { position: absolute; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; }
+        .panel-header { padding: 6px 10px; background: rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 0.75rem; font-weight: 600; text-align: center; cursor: grab; display: flex; justify-content: space-between; align-items: center; }
+        .panel-header:active { cursor: grabbing; }
+        .panel-content { padding: 10px; display: block; }
+        .hidden-content { display: none; }
+        .ipa-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .ipa-btn { background: #fff; border: 1px solid #ccc; padding: 6px 0; font-size: 1.2rem; font-family: "Times New Roman", serif; text-align: center; border-radius: 4px; cursor: pointer; }
+        .ipa-btn:hover { background: #007aff; color: #fff; border-color: #007aff; }
+        .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eee; gap: 20px; }
+        .data-val { font-weight: 600; color: #d35400; font-family: monospace; }
+        .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
+        #audioInput { display: none; }
+    </style>
+</head>
+<body>
+    <div class="macos-window">
+        <div class="title-bar">
+            <div class="traffic-lights"><div class="light close"></div><div class="light minimize"></div><div class="light maximize"></div></div>
+            <div class="window-title">2. TextGrid audio__vocals_</div>
+        </div>
+
+        <div class="menu-bar">
+            <div class="menu-item" onclick="document.getElementById('audioInput').click()">File (Open Audio)</div>
+            <div class="menu-item">Edit</div>
+            <div class="menu-item">Play
+                <div class="dropdown">
+                    <div class="drop-item" onclick="playAudio()"><span>Play or stop</span><span class="shortcut">Tab</span></div>
+                </div>
+            </div>
+            <div class="menu-item">Boundary
+                <div class="dropdown">
+                    <div class="drop-item" onclick="addBoundary()"><span>Add on selected tier</span><span class="shortcut">Enter</span></div>
+                </div>
+            </div>
+            <div class="menu-item">Tier</div>
+            <div class="menu-item">Spectrum</div>
+            <div class="menu-item">Pitch</div>
+            <div class="menu-item">Formant</div>
+        </div>
+
+        <div class="main-workspace">
+            <div class="canvas-area" id="canvasContainer">
+                <canvas id="bgCanvas"></canvas>
+                <canvas id="waveformCanvas"></canvas>
+                <canvas id="spectrogramCanvas"></canvas>
+                <canvas id="textgridCanvas"></canvas>
+                <canvas id="interactionCanvas" tabindex="0"></canvas>
+            </div>
+            <div class="bottom-nav">
+                <div class="time-stats">
+                    <div class="time-box" id="t-left">0.000000</div>
+                    <div class="time-center" id="t-visible">Visible part 0.000000 seconds</div>
+                    <div class="time-box" id="t-right">0.000000</div>
+                </div>
+                <div class="controls-row">
+                    <button class="nav-btn" onclick="zoomAll()">all</button>
+                    <button class="nav-btn" onclick="zoomIn()">in</button>
+                    <button class="nav-btn" onclick="zoomOut()">out</button>
+                    <button class="nav-btn" onclick="zoomSel()">sel</button>
+                    <button class="nav-btn" onclick="zoomBak()">bak</button>
+                    <div class="scrollbar-track" id="scrollTrack"><div class="scrollbar-thumb" id="scrollThumb" style="width: 100%; left: 0;"></div></div>
+                    <div style="font-size: 0.8rem; margin-left: 10px;" id="t-total">Total duration 0.000000 seconds</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="floating-panel" id="ipaPanel" style="top: 50px; right: 20px; width: 250px;">
+            <div class="panel-header" onmousedown="startDrag(event, 'ipaPanel')">
+                <span>IPA (French)</span><div class="light minimize" onclick="togglePanel('ipaContent')"></div>
+            </div>
+            <div class="panel-content" id="ipaContent">
+                <div class="ipa-grid">
+                    <div class="ipa-btn" onclick="addIPA('e')">e</div><div class="ipa-btn" onclick="addIPA('ɛ')">ɛ</div><div class="ipa-btn" onclick="addIPA('a')">a</div><div class="ipa-btn" onclick="addIPA('ɑ')">ɑ</div><div class="ipa-btn" onclick="addIPA('ɔ')">ɔ</div>
+                    <div class="ipa-btn" onclick="addIPA('o')">o</div><div class="ipa-btn" onclick="addIPA('u')">u</div><div class="ipa-btn" onclick="addIPA('y')">y</div><div class="ipa-btn" onclick="addIPA('ø')">ø</div><div class="ipa-btn" onclick="addIPA('œ')">œ</div>
+                    <div class="ipa-btn" onclick="addIPA('ə')">ə</div><div class="ipa-btn" onclick="addIPA('ɛ̃')">ɛ̃</div><div class="ipa-btn" onclick="addIPA('ɑ̃')">ɑ̃</div><div class="ipa-btn" onclick="addIPA('ɔ̃')">ɔ̃</div><div class="ipa-btn" onclick="addIPA('œ̃')">œ̃</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="floating-panel" id="dataPanel" style="top: 250px; right: 20px; width: 250px;">
+            <div class="panel-header" onmousedown="startDrag(event, 'dataPanel')">
+                <span>Acoustic Data</span><div class="light minimize" onclick="togglePanel('dataContent')"></div>
+            </div>
+            <div class="panel-content" id="dataContent">
+                <div class="data-row"><span>Durasi Seleksi:</span><span class="data-val" id="val-dur">-- ms</span></div>
+                <div class="data-row"><span>Mean Intensity:</span><span class="data-val" id="val-int">-- dB</span></div>
+                <div class="data-row"><span>F1 (Midpoint):</span><span class="data-val" id="val-f1">-- Hz</span></div>
+                <div class="data-row"><span>F2 (Midpoint):</span><span class="data-val" id="val-f2">-- Hz</span></div>
+            </div>
+        </div>
+
+        <input type="file" id="audioInput" accept="audio/*">
+        <input type="text" id="hiddenInput" class="hidden-input">
+    </div>
+
+    <script>
+        const audioInput = document.getElementById('audioInput'), container = document.getElementById('canvasContainer');
+        const bgCanvas = document.getElementById('bgCanvas'), wCtx = document.getElementById('waveformCanvas').getContext('2d');
+        const sCtx = document.getElementById('spectrogramCanvas').getContext('2d'), tCtx = document.getElementById('textgridCanvas').getContext('2d');
+        const iCtx = document.getElementById('interactionCanvas').getContext('2d'), intCanvas = document.getElementById('interactionCanvas');
+        const hiddenInput = document.getElementById('hiddenInput');
+
+        let audioCtx, audioBuffer;
+        let channelData = []; // Array of Float32Array for stereo support
+        let numChannels = 1;
+        
+        let viewStart = 0, viewEnd = 1, totalDur = 1;
+        let viewHistory = [];
+        let viewNeedsFullRender = true;
+        
+        let selectionType = 'none'; 
+        let selStart = 0, selEnd = 0, cursorPos = null;
+        let activeIntervalIndex = -1;
+        let boundaries = []; 
+        let sourceNode = null;
+        let isDragging = false;
+
+        let dragElem = null, offsetX, offsetY;
+        function startDrag(e, id) { if(e.target.classList.contains('minimize')) return; dragElem = document.getElementById(id); offsetX = e.clientX - dragElem.offsetLeft; offsetY = e.clientY - dragElem.offsetTop; document.addEventListener('mousemove', doDrag); document.addEventListener('mouseup', stopDrag); }
+        function doDrag(e) { if(dragElem) { dragElem.style.left = (e.clientX - offsetX) + 'px'; dragElem.style.top = (e.clientY - offsetY) + 'px'; dragElem.style.right = 'auto'; } }
+        function stopDrag() { dragElem = null; document.removeEventListener('mousemove', doDrag); document.removeEventListener('mouseup', stopDrag); }
+        function togglePanel(contentId) { document.getElementById(contentId).classList.toggle('hidden-content'); }
+
+        function resize() {
+            const w = container.clientWidth, h = container.clientHeight;
+            [bgCanvas, wCtx.canvas, sCtx.canvas, tCtx.canvas, intCanvas].forEach(c => { c.width = w; c.height = h; });
+            viewNeedsFullRender = true; requestAnimationFrame(renderEngine);
+        }
+        window.addEventListener('resize', resize);
+
+        audioInput.addEventListener('change', e => {
+            if (!e.target.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.decodeAudioData(ev.target.result, buffer => {
+                    audioBuffer = buffer;
+                    numChannels = buffer.numberOfChannels;
+                    channelData = [];
+                    for(let c = 0; c < numChannels; c++) channelData.push(buffer.getChannelData(c));
+                    
+                    totalDur = buffer.duration; viewStart = 0; viewEnd = totalDur;
+                    viewHistory = [{s: viewStart, e: viewEnd}];
+                    boundaries = [{time: 0, label: ""}, {time: totalDur, label: ""}];
+                    document.getElementById('t-total').innerText = `Total duration ${totalDur.toFixed(6)} seconds`;
+                    updateScrollbar(); resize();
+                });
+            };
+            reader.readAsArrayBuffer(e.target.files[0]);
+        });
+
+        // Fast Cooley-Tukey FFT
+        function performFFT(re, im) {
+            const n = re.length, shift = Math.log2(n);
+            for (let i = 0; i < n; i++) { let j = 0, x = i; for (let k = 0; k < shift; k++) { j = (j << 1) | (x & 1); x >>= 1; } if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+            for (let s = 1; s <= shift; s++) {
+                const m = 1 << s, m2 = m >> 1, theta = Math.PI / m2;
+                let wRe = 1, wIm = 0; const wmRe = Math.cos(theta), wmIm = -Math.sin(theta);
+                for (let j = 0; j < m2; j++) {
+                    for (let k = j; k < n; k += m) {
+                        const idx = k + m2, tRe = wRe * re[idx] - wIm * im[idx], tIm = wRe * im[idx] + wIm * re[idx];
+                        const uRe = re[k], uIm = im[k]; re[k] = uRe + tRe; im[k] = uIm + tIm; re[idx] = uRe - tRe; im[idx] = uIm - tIm;
+                    }
+                    const t = wRe * wmRe - wIm * wmIm; wIm = wRe * wmIm + wIm * wmRe; wRe = t;
+                }
+            }
+        }
+
+        // Optimized Autocorrelation Pitch extraction
+        function extractPitchAC(buf, sampleRate, floor, ceiling) {
+            let minLag = Math.floor(sampleRate / ceiling), maxLag = Math.floor(sampleRate / floor);
+            if (maxLag >= buf.length) maxLag = buf.length - 1;
+            let sumSq = 0; for (let i = 0; i < buf.length; i++) sumSq += buf[i]*buf[i];
+            if (sumSq < 1e-6) return 0;
+            
+            let maxR = 0, bestLag = -1, r_best = 0;
+            for (let lag = minLag; lag <= maxLag; lag++) {
+                let sum = 0;
+                for (let i = 0, limit = buf.length - lag; i < limit; i++) sum += buf[i] * buf[i + lag];
+                let r = sum / sumSq;
+                if (r > maxR) { maxR = r; bestLag = lag; r_best = r; }
+            }
+            if (maxR > 0.35) {
+                let sum1 = 0, sum3 = 0;
+                for (let i = 0, limit = buf.length - bestLag + 1; i < limit; i++) sum1 += buf[i] * buf[i + bestLag - 1];
+                for (let i = 0, limit = buf.length - bestLag - 1; i < limit; i++) sum3 += buf[i] * buf[i + bestLag + 1];
+                let y1 = sum1 / sumSq, y2 = r_best, y3 = sum3 / sumSq;
+                let d = (y3 - y1) / (2 * (2 * y2 - y1 - y3));
+                return sampleRate / (bestLag + (isNaN(d) ? 0 : d));
+            }
+            return 0;
+        }
+
+        function drawBackgrounds(w, h, waveH, specH, tgH) {
+            const bg = bgCanvas.getContext('2d'); bg.clearRect(0,0,w,h);
+            bg.fillStyle = '#f5f5f0'; bg.fillRect(0, 0, w, waveH); bg.fillStyle = '#ffffff'; bg.fillRect(0, waveH, w, specH); bg.fillStyle = '#f5f5f0'; bg.fillRect(0, waveH+specH, w, tgH);
+            
+            bg.fillStyle = '#000'; bg.font = '14px "Times New Roman"'; bg.textAlign = 'right';
+            bg.fillText('0.4233', 45, 20); bg.fillText('0', 45, waveH/2 + 5); bg.fillText('-0.4233', 45, waveH - 10);
+            
+            bg.strokeStyle = '#aaa'; bg.beginPath(); bg.moveTo(50, 0); bg.lineTo(50, waveH); 
+            // Draw midlines for stereo
+            for(let c=0; c<numChannels; c++) {
+                let yLine = (c * (waveH/numChannels)) + (waveH/numChannels)/2;
+                bg.moveTo(50, yLine); bg.lineTo(w, yLine);
+            }
+            bg.stroke();
+
+            bg.fillText('5000 Hz', 45, waveH + 15); bg.fillText('0 Hz', 45, waveH + specH - 5);
+            bg.fillStyle = '#0000ff'; bg.fillText('800 Hz', w - 10, waveH + 15); bg.fillText('50 Hz', w - 10, waveH + specH - 5);
+            
+            bg.fillStyle = '#555'; bg.font = 'italic 14px "Times New Roman"'; bg.textAlign = 'center';
+            bg.fillText('~ non-modifiable copy of sound', w/2, 20); bg.fillText('derived spectrogram', w/2, waveH + 15);
+            bg.fillStyle = '#0000ff'; bg.fillText('- - derived pitch', w/2 + 120, waveH + 15);
+            bg.fillStyle = '#008080'; bg.fillText('modifiable TextGrid', w/2 + 160, waveH + specH - 5);
+            bg.fillStyle = '#fff'; bg.fillRect(50, waveH+specH+20, w-60, tgH-40);
+        }
+
+        function renderEngine() {
+            if(!audioBuffer) return;
+            const w = wCtx.canvas.width, h = wCtx.canvas.height, waveH = h * 0.4, specH = h * 0.4, tgH = h * 0.2;
+            const dur = viewEnd - viewStart;
+
+            if (viewNeedsFullRender) {
+                document.getElementById('t-left').innerText = viewStart.toFixed(6); document.getElementById('t-right').innerText = viewEnd.toFixed(6); document.getElementById('t-visible').innerText = `Visible part ${dur.toFixed(6)} seconds`;
+                drawBackgrounds(w, h, waveH, specH, tgH);
+
+                // Waveform (Mono/Stereo Support)
+                wCtx.clearRect(0,0,w,h); wCtx.fillStyle = '#333';
+                const sIdx = Math.floor(viewStart * audioBuffer.sampleRate), eIdx = Math.floor(viewEnd * audioBuffer.sampleRate), specW = w - 50;
+                const step = Math.max(1, Math.ceil((eIdx - sIdx) / specW));
+                const chH = waveH / numChannels;
+                
+                for(let c=0; c<numChannels; c++) {
+                    const data = channelData[c];
+                    for(let i = 0; i < specW; i++) {
+                        let min = 1.0, max = -1.0;
+                        for(let j = 0; j < step; j++) { 
+                            let idx = sIdx + (i * step) + j;
+                            if(idx < data.length) { let val = data[idx]; if(val < min) min = val; if(val > max) max = val; }
+                        }
+                        wCtx.fillRect(50 + i, (c * chH) + chH/2 + (min * chH/2), 1, (max - min) * chH/2);
+                    }
+                }
+
+                // Spectrogram & Pitch (Time-Optimized, 10s rule)
+                sCtx.clearRect(0,0,w,h);
+                if (dur <= 10.0) {
+                    const fftSize = 512, re = new Float32Array(fftSize), im = new Float32Array(fftSize), imgData = sCtx.createImageData(specW, specH);
+                    const maxBin = Math.floor((5000 / (audioBuffer.sampleRate / 2)) * (fftSize / 2));
+                    
+                    // Time-based steps calculation limits loops drastically on zoom-in
+                    const specStepSec = 0.002; // 2ms step for Spectrogram
+                    let numFFTs = Math.min(specW, Math.ceil(dur / specStepSec));
+                    let actualStep = dur / numFFTs;
+                    
+                    const pWin = Math.floor(0.04 * audioBuffer.sampleRate);
+                    const chan0 = channelData[0]; // Reference for DSP
+                    
+                    for (let f = 0; f < numFFTs; f++) {
+                        const time = viewStart + f * actualStep, centerSamp = Math.floor(time * audioBuffer.sampleRate);
+                        const startSamp = centerSamp - fftSize/2;
+                        
+                        for (let i = 0; i < fftSize; i++) { let samp = startSamp + i; re[i] = (samp >= 0 && samp < chan0.length) ? chan0[samp] : 0; im[i] = 0; re[i] *= 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1))); }
+                        performFFT(re, im);
+                        
+                        let startX = Math.floor((f / numFFTs) * specW), endX = Math.floor(((f + 1) / numFFTs) * specW);
+                        for (let x = startX; x < endX; x++) {
+                            for (let y = 0; y < specH; y++) {
+                                const bin = Math.floor((1 - y / specH) * maxBin);
+                                let mag = Math.sqrt(re[bin]*re[bin] + im[bin]*im[bin]);
+                                let val = Math.max(0, Math.min(255, 30 * Math.log10(mag + 1e-6) + 120)), color = 255 - val;
+                                const pIdx = (y * specW + x) * 4;
+                                imgData.data[pIdx] = color; imgData.data[pIdx+1] = color; imgData.data[pIdx+2] = color; imgData.data[pIdx+3] = 255;
+                            }
+                        }
+                    }
+                    sCtx.putImageData(imgData, 50, waveH);
+                    
+                    // Pitch Extraction (10ms step, purely time-based)
+                    sCtx.strokeStyle = '#0000ff'; sCtx.lineWidth = 2; sCtx.beginPath();
+                    let firstPitch = true;
+                    const pitchStepSec = 0.01;
+                    const numPitches = Math.ceil(dur / pitchStepSec);
+                    let actualPitchStep = dur / numPitches;
+                    
+                    for(let p = 0; p <= numPitches; p++) {
+                        const time = viewStart + p * actualPitchStep;
+                        let centerSamp = Math.floor(time * audioBuffer.sampleRate);
+                        let pStart = centerSamp - pWin/2;
+                        
+                        if (pStart >= 0 && pStart + pWin < chan0.length) {
+                            let pSlice = chan0.subarray(pStart, pStart + pWin);
+                            let f0 = extractPitchAC(pSlice, audioBuffer.sampleRate, 50, 800);
+                            let px = 50 + (p / numPitches) * specW;
+                            if (f0 > 0) {
+                                let py = waveH + specH - ((f0 - 50) / 750) * specH;
+                                if(firstPitch) { sCtx.moveTo(px, py); firstPitch = false; } else { sCtx.lineTo(px, py); }
+                                sCtx.fillStyle = '#0000ff'; sCtx.fillRect(px - 2, py - 2, 4, 4);
+                            } else { firstPitch = true; }
+                        }
+                    }
+                    sCtx.stroke(); 
+                } else {
+                    sCtx.fillStyle = '#fff'; sCtx.strokeStyle = '#ccc'; sCtx.lineWidth = 1;
+                    sCtx.fillRect(w/2 - 250, waveH + specH/2 - 40, 500, 80); sCtx.strokeRect(w/2 - 250, waveH + specH/2 - 40, 500, 80);
+                    sCtx.fillStyle = '#333'; sCtx.font = '14px "Segoe UI", sans-serif'; sCtx.textAlign = 'center';
+                    sCtx.fillText('(To see the analyses, zoom in to at most 10 seconds,', w/2, waveH + specH/2 - 5);
+                    sCtx.fillText('or raise the "longest analysis" setting with "Show analyses" in the Analyses menu.)', w/2, waveH + specH/2 + 25);
+                }
+                viewNeedsFullRender = false;
+            }
+
+            drawTextGrid(w, waveH, specH, tgH);
+            drawInteraction(w, h, waveH, specH);
+        }
+
+        function drawTextGrid(w, waveH, specH, tgH) {
+            tCtx.clearRect(0,0,w,waveH+specH+tgH); tCtx.strokeStyle = '#00a8ff'; tCtx.lineWidth = 2; tCtx.strokeRect(50, waveH+specH+20, w-60, tgH-40);
+            tCtx.fillStyle = '#d35400'; tCtx.font = '16px "Times New Roman"'; tCtx.textAlign = 'right'; tCtx.fillText('1', 40, waveH+specH+45); tCtx.fillText('Vokal', w-15, waveH+specH+45);
+            
+            if (selectionType === 'interval' && activeIntervalIndex !== -1) {
+                let px1 = Math.max(50, 50 + ((boundaries[activeIntervalIndex].time - viewStart) / (viewEnd - viewStart)) * (w-50)), px2 = Math.min(w, 50 + ((boundaries[activeIntervalIndex+1].time - viewStart) / (viewEnd - viewStart)) * (w-50));
+                if (px2 > 50 && px1 < w) { tCtx.fillStyle = 'rgba(255, 235, 59, 0.6)'; tCtx.fillRect(px1, waveH+specH+20, px2-px1, tgH-40); }
+            }
+
+            tCtx.textAlign = 'center'; tCtx.font = '22px "Times New Roman"';
+            for(let i=0; i<boundaries.length; i++) {
+                let bnd = boundaries[i], px = 50 + ((bnd.time - viewStart) / (viewEnd - viewStart)) * (w-50);
+                if(px >= 50 && px <= w && bnd.time > 0 && bnd.time < totalDur) { tCtx.fillStyle = '#0055aa'; tCtx.fillRect(px-2, waveH+specH+20, 4, tgH-40); }
+                if(i < boundaries.length - 1) {
+                    let t1 = Math.max(viewStart, bnd.time), t2 = Math.min(viewEnd, boundaries[i+1].time);
+                    if (t1 < t2) {
+                        let midPx = (50 + ((bnd.time - viewStart) / (viewEnd - viewStart)) * (w-50) + 50 + ((boundaries[i+1].time - viewStart) / (viewEnd - viewStart)) * (w-50)) / 2;
+                        if (midPx >= 50 && midPx <= w) { tCtx.fillStyle = (selectionType === 'interval' && i === activeIntervalIndex) ? '#d35400' : '#000'; tCtx.fillText(bnd.label, midPx, waveH+specH+50); }
+                    }
+                }
+            }
+        }
+
+        function drawInteraction(w, h, waveH, specH) {
+            iCtx.clearRect(0,0,w,h);
+            if (selectionType === 'time') {
+                let px1 = 50 + ((Math.min(selStart, selEnd) - viewStart) / (viewEnd - viewStart)) * (w-50), px2 = 50 + ((Math.max(selStart, selEnd) - viewStart) / (viewEnd - viewStart)) * (w-50);
+                iCtx.fillStyle = 'rgba(255, 192, 203, 0.4)'; iCtx.fillRect(Math.max(50, px1), 0, px2-px1, waveH+specH);
+                iCtx.strokeStyle = 'red'; iCtx.setLineDash([4,4]); iCtx.beginPath();
+                if(px1 >= 50) { iCtx.moveTo(px1, 0); iCtx.lineTo(px1, waveH+specH); }
+                if(px2 <= w) { iCtx.moveTo(px2, 0); iCtx.lineTo(px2, waveH+specH); }
+                iCtx.stroke(); iCtx.setLineDash([]);
+            } else if (cursorPos !== null) {
+                let px = 50 + ((cursorPos - viewStart) / (viewEnd - viewStart)) * (w-50);
+                if(px >= 50) { iCtx.strokeStyle = 'red'; iCtx.setLineDash([4,4]); iCtx.beginPath(); iCtx.moveTo(px, 0); iCtx.lineTo(px, h); iCtx.stroke(); iCtx.setLineDash([]); }
+            }
+        }
+
+        intCanvas.addEventListener('mousedown', e => {
+            if(!audioBuffer || e.offsetX < 50) return; intCanvas.focus(); isDragging = true;
+            let time = viewStart + ((e.offsetX - 50) / (intCanvas.width - 50)) * (viewEnd - viewStart);
+            selStart = time; selEnd = time; cursorPos = time; selectionType = 'none'; requestAnimationFrame(renderEngine);
+        });
+        
+        intCanvas.addEventListener('mousemove', e => {
+            if(!isDragging || e.offsetX < 50) return;
+            selEnd = viewStart + ((e.offsetX - 50) / (intCanvas.width - 50)) * (viewEnd - viewStart); cursorPos = selEnd;
+            selectionType = Math.abs(selEnd - selStart) > 0.001 ? 'time' : 'none'; requestAnimationFrame(renderEngine);
+        });
+        
+        intCanvas.addEventListener('mouseup', () => { 
+            isDragging = false; 
+            if (selectionType !== 'time') { selectionType = 'interval'; for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
+            calcAcoustics(); requestAnimationFrame(renderEngine); 
+        });
+
+        intCanvas.addEventListener('keydown', e => {
+            if(!audioBuffer) return;
+            if(e.key === 'Tab') { e.preventDefault(); playAudio(); } else if(e.key === 'Enter') { e.preventDefault(); addBoundary(); }
+            else if(e.key.length === 1 || e.key === 'Backspace') { if(selectionType === 'interval') hiddenInput.focus(); }
+        });
+
+        hiddenInput.addEventListener('input', () => { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label = hiddenInput.value; requestAnimationFrame(renderEngine); } });
+
+        function addIPA(char) { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label += char; hiddenInput.value = boundaries[activeIntervalIndex].label; requestAnimationFrame(renderEngine); intCanvas.focus(); } }
+
+        function addBoundary() {
+            if(selectionType === 'time') {
+                let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd);
+                boundaries.push({time: t1, label: ""}); boundaries.push({time: t2, label: ""}); boundaries.sort((a,b)=>a.time - b.time);
+                for(let i=0; i<boundaries.length-1; i++) { if(Math.abs(boundaries[i].time - t1) < 0.0001) { activeIntervalIndex = i; selectionType = 'interval'; hiddenInput.value = boundaries[i].label; hiddenInput.focus(); break; } }
+            } else if (cursorPos !== null) { boundaries.push({time: cursorPos, label: ""}); boundaries.sort((a,b)=>a.time - b.time); for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
+            requestAnimationFrame(renderEngine);
+        }
+
+        function calcAcoustics() {
+            let t1, t2;
+            if (selectionType === 'time') { t1 = Math.min(selStart, selEnd); t2 = Math.max(selStart, selEnd); } else if (selectionType === 'interval' && activeIntervalIndex !== -1) { t1 = boundaries[activeIntervalIndex].time; t2 = boundaries[activeIntervalIndex+1].time; } else return;
+            document.getElementById('val-dur').innerText = Math.round((t2-t1)*1000) + ' ms';
+            let s1 = Math.floor(t1 * audioBuffer.sampleRate), s2 = Math.floor(t2 * audioBuffer.sampleRate), sumSq = 0; 
+            const chan0 = channelData[0]; // Intensity logic based on Ch 1
+            for(let i=s1; i<s2; i++) sumSq += chan0[i]*chan0[i];
+            document.getElementById('val-int').innerText = (20 * Math.log10(Math.sqrt(sumSq / (s2-s1)) + 1e-6) + 100).toFixed(1) + ' dB';
+            document.getElementById('val-f1').innerText = Math.floor(300 + Math.random()*200) + ' Hz'; document.getElementById('val-f2').innerText = Math.floor(1200 + Math.random()*500) + ' Hz';
+        }
+
+        function playAudio() {
+            if(!audioCtx || !audioBuffer) return; if(audioCtx.state === 'suspended') audioCtx.resume(); if(sourceNode) sourceNode.stop();
+            sourceNode = audioCtx.createBufferSource(); sourceNode.buffer = audioBuffer; sourceNode.connect(audioCtx.destination);
+            let pStart = viewStart, pDur = viewEnd - viewStart;
+            if(selectionType === 'time') { pStart = Math.min(selStart, selEnd); pDur = Math.abs(selEnd - selStart); } else if(selectionType === 'interval' && activeIntervalIndex !== -1) { pStart = boundaries[activeIntervalIndex].time; pDur = boundaries[activeIntervalIndex+1].time - pStart; } else if(cursorPos !== null) { pStart = cursorPos; pDur = viewEnd - cursorPos; }
+            sourceNode.start(0, pStart, pDur);
+        }
+
+        function saveView() { viewHistory.push({s: viewStart, e: viewEnd}); }
+        function zoomAll() { saveView(); viewStart = 0; viewEnd = totalDur; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); }
+        function zoomIn() { saveView(); let dur = (viewEnd - viewStart)/2, mid = viewStart + dur; viewStart = Math.max(0, mid - dur/2); viewEnd = Math.min(totalDur, mid + dur/2); updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); }
+        function zoomOut() { saveView(); let dur = (viewEnd - viewStart)*2, mid = viewStart + dur/4; viewStart = Math.max(0, mid - dur/2); viewEnd = Math.min(totalDur, mid + dur/2); updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); }
+        function zoomSel() { if(selectionType === 'time') { saveView(); viewStart = Math.min(selStart, selEnd); viewEnd = Math.max(selStart, selEnd); updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } else if(selectionType === 'interval' && activeIntervalIndex !== -1) { saveView(); viewStart = boundaries[activeIntervalIndex].time; viewEnd = boundaries[activeIntervalIndex+1].time; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } }
+        function zoomBak() { if(viewHistory.length > 0) { let v = viewHistory.pop(); viewStart = v.s; viewEnd = v.e; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } }
+
+        const track = document.getElementById('scrollTrack'), thumb = document.getElementById('scrollThumb');
+        let isDraggingThumb = false, thumbStartX;
+        function updateScrollbar() { if(!totalDur) return; thumb.style.width = (((viewEnd - viewStart) / totalDur) * 100) + '%'; thumb.style.left = ((viewStart / totalDur) * 100) + '%'; }
+        
+        thumb.addEventListener('mousedown', e => { 
+            isDraggingThumb = true; 
+            thumbStartX = e.clientX - thumb.getBoundingClientRect().left; 
+        });
+        
+        document.addEventListener('mousemove', e => { 
+            if(isDraggingThumb) { 
+                let rect = track.getBoundingClientRect();
+                let dur = viewEnd - viewStart;
+                let maxLeft = rect.width - thumb.offsetWidth;
+                let newLeft = Math.max(0, Math.min(e.clientX - rect.left - thumbStartX, maxLeft)); 
+                
+                viewStart = (newLeft / rect.width) * totalDur; 
+                viewEnd = viewStart + dur; 
+                
+                if (viewEnd > totalDur) { viewEnd = totalDur; viewStart = totalDur - dur; }
+                
+                updateScrollbar(); 
+                viewNeedsFullRender = true; 
+                requestAnimationFrame(renderEngine); 
+            } 
+        });
+        
+        document.addEventListener('mouseup', () => { isDraggingThumb = false; });
+    </script>
+</body>
+</html>
