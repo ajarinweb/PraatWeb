@@ -2,13 +2,14 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Praat Web: La Vaguelette (Responsive & Touch Edition)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Praat Web: La Vaguelette (Responsive Fix)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
-        body { background: #2c3e50; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; color: #000; }
-        .macos-window { background: #f0f0f0; border: 1px solid #777; border-radius: 8px; width: 100vw; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 20px 50px rgba(0,0,0,0.5); overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-        @media (min-width: 768px) { .macos-window { width: 98vw; height: 95vh; } }
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
+        body { background: #2c3e50; display: flex; align-items: center; justify-content: center; color: #000; }
+        .macos-window { background: #f0f0f0; width: 100%; height: 100%; border: none; border-radius: 0; display: flex; flex-direction: column; overflow: hidden; position: relative; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        @media (min-width: 768px) { .macos-window { width: 98%; height: 96%; border: 1px solid #777; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); } }
         .title-bar { background: linear-gradient(to bottom, #e8e8e8, #d0d0d0); height: 28px; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #aaa; position: relative; flex-shrink: 0; }
         .traffic-lights { display: flex; gap: 6px; }
         .light { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.2); }
@@ -16,7 +17,7 @@
         .minimize { background: #ffbd2e; cursor: pointer; }
         .maximize { background: #27c93f; }
         .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
-        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
         .menu-bar::-webkit-scrollbar { display: none; }
         .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; display: inline-block; }
         .menu-item:hover { background: #007aff; color: #fff; }
@@ -29,18 +30,18 @@
         .canvas-area { flex: 1; position: relative; background: #fafafa; border-bottom: 1px solid #ccc; cursor: text; overflow: hidden; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; background: transparent; touch-action: none; }
         #interactionCanvas { z-index: 10; outline: none; }
-        .bottom-nav { background: #e8e8e8; display: flex; flex-direction: column; border-top: 1px solid #aaa; z-index: 50; flex-shrink: 0; }
+        .bottom-nav { background: #e8e8e8; display: flex; flex-direction: column; border-top: 1px solid #aaa; z-index: 50; flex-shrink: 0; padding-bottom: max(2px, env(safe-area-inset-bottom)); }
         .time-stats { display: flex; font-size: 0.75rem; border-bottom: 1px solid #ccc; background: #dcdcdc; }
         @media (min-width: 768px) { .time-stats { font-size: 0.85rem; } }
         .time-box { flex: 1; text-align: center; padding: 4px; border-right: 1px solid #ccc; font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
         .time-center { flex: 2; text-align: center; padding: 4px; border-right: 1px solid #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .controls-row { display: flex; align-items: center; justify-content: center; padding: 5px 10px; gap: 5px; flex-wrap: wrap; }
+        .controls-row { display: flex; align-items: center; justify-content: center; padding: 5px 10px; gap: 5px; flex-wrap: wrap; min-height: 35px; }
         .nav-btn { background: #f5f5f5; border: 1px solid #999; padding: 4px 10px; font-size: 0.75rem; border-radius: 3px; cursor: pointer; color: #000; touch-action: manipulation; }
         .nav-btn:hover { background: #e0e0e0; }
-        .scrollbar-track { flex: 1; min-width: 120px; height: 20px; background: #ddd; border: 1px solid #999; margin: 0 5px; position: relative; border-radius: 10px; cursor: pointer; touch-action: none; }
+        .scrollbar-track { flex: 1; min-width: 120px; height: 18px; background: #ddd; border: 1px solid #999; margin: 2px 5px; position: relative; border-radius: 9px; cursor: pointer; touch-action: none; }
         .scrollbar-thumb { position: absolute; top: 0; height: 100%; background: #999; border-radius: 8px; }
         .total-dur-txt { font-size: 0.75rem; margin-left: 5px; white-space: nowrap; }
-        .floating-panel { position: absolute; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; max-width: 90vw; }
+        .floating-panel { position: absolute; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; max-width: 90vw; }
         .panel-header { padding: 8px 10px; background: rgba(0,0,0,0.1); border-bottom: 1px solid rgba(0,0,0,0.1); font-size: 0.8rem; font-weight: 600; text-align: center; cursor: grab; display: flex; justify-content: space-between; align-items: center; touch-action: none; }
         .panel-header:active { cursor: grabbing; }
         .panel-content { padding: 10px; display: block; }
@@ -136,7 +137,6 @@
     </div>
 
     <script>
-        // Utilities for mouse & touch
         function getClientX(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX; }
         function getClientY(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY; }
         function getOffsetX(e, elem) { if(e.touches && e.touches.length > 0) { const rect = elem.getBoundingClientRect(); return e.touches[0].clientX - rect.left; } return e.offsetX; }
@@ -147,51 +147,20 @@
         const iCtx = document.getElementById('interactionCanvas').getContext('2d'), intCanvas = document.getElementById('interactionCanvas');
         const hiddenInput = document.getElementById('hiddenInput');
 
-        let audioCtx, audioBuffer;
-        let channelData = []; 
-        let numChannels = 1;
-        
-        let viewStart = 0, viewEnd = 1, totalDur = 1;
-        let viewHistory = [];
-        let viewNeedsFullRender = true;
-        
-        let selectionType = 'none'; 
-        let selStart = 0, selEnd = 0, cursorPos = null;
-        let activeIntervalIndex = -1;
-        let boundaries = []; 
-        let sourceNode = null;
-        let isDraggingInteraction = false;
+        let audioCtx, audioBuffer, channelData = [], numChannels = 1;
+        let viewStart = 0, viewEnd = 1, totalDur = 1, viewHistory = [], viewNeedsFullRender = true;
+        let selectionType = 'none', selStart = 0, selEnd = 0, cursorPos = null, activeIntervalIndex = -1, boundaries = [], sourceNode = null, isDraggingInteraction = false;
 
-        // Floating Panels Dragging Logic (Mouse + Touch)
         function setupPanelDrag(headerId, panelId) {
-            const header = document.getElementById(headerId);
-            const panel = document.getElementById(panelId);
+            const header = document.getElementById(headerId), panel = document.getElementById(panelId);
             let isDragging = false, dragOffsetX, dragOffsetY;
-            
-            function onStart(e) {
-                if(e.target.classList.contains('minimize')) return;
-                isDragging = true;
-                dragOffsetX = getClientX(e) - panel.offsetLeft;
-                dragOffsetY = getClientY(e) - panel.offsetTop;
-            }
-            function onMove(e) {
-                if(isDragging) {
-                    panel.style.left = (getClientX(e) - dragOffsetX) + 'px';
-                    panel.style.top = (getClientY(e) - dragOffsetY) + 'px';
-                    panel.style.right = 'auto';
-                }
-            }
+            function onStart(e) { if(e.target.classList.contains('minimize')) return; isDragging = true; dragOffsetX = getClientX(e) - panel.offsetLeft; dragOffsetY = getClientY(e) - panel.offsetTop; }
+            function onMove(e) { if(isDragging) { panel.style.left = (getClientX(e) - dragOffsetX) + 'px'; panel.style.top = (getClientY(e) - dragOffsetY) + 'px'; panel.style.right = 'auto'; } }
             function onEnd() { isDragging = false; }
-
-            header.addEventListener('mousedown', onStart);
-            document.addEventListener('mousemove', onMove);
-            document.addEventListener('mouseup', onEnd);
-            header.addEventListener('touchstart', onStart, {passive: true});
-            document.addEventListener('touchmove', onMove, {passive: true});
-            document.addEventListener('touchend', onEnd);
+            header.addEventListener('mousedown', onStart); document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onEnd);
+            header.addEventListener('touchstart', onStart, {passive: true}); document.addEventListener('touchmove', onMove, {passive: true}); document.addEventListener('touchend', onEnd);
         }
-        setupPanelDrag('ipaDrag', 'ipaPanel');
-        setupPanelDrag('dataDrag', 'dataPanel');
+        setupPanelDrag('ipaDrag', 'ipaPanel'); setupPanelDrag('dataDrag', 'dataPanel');
         function togglePanel(contentId) { document.getElementById(contentId).classList.toggle('hidden-content'); }
 
         function resize() {
@@ -219,7 +188,6 @@
             reader.readAsArrayBuffer(e.target.files[0]);
         });
 
-        // Fast FFT
         function performFFT(re, im) {
             const n = re.length, shift = Math.log2(n);
             for (let i = 0; i < n; i++) { let j = 0, x = i; for (let k = 0; k < shift; k++) { j = (j << 1) | (x & 1); x >>= 1; } if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
@@ -236,7 +204,6 @@
             }
         }
 
-        // True Pitch AC
         function extractPitchAC(buf, sampleRate, floor, ceiling) {
             let minLag = Math.floor(sampleRate / ceiling), maxLag = Math.floor(sampleRate / floor);
             if (maxLag >= buf.length) maxLag = buf.length - 1;
@@ -262,25 +229,18 @@
             const bg = bgCanvas.getContext('2d'); bg.clearRect(0,0,w,h);
             bg.fillStyle = '#f5f5f0'; bg.fillRect(0, 0, w, waveH); bg.fillStyle = '#ffffff'; bg.fillRect(0, waveH, w, specH); bg.fillStyle = '#f5f5f0'; bg.fillRect(0, waveH+specH, w, tgH);
             bg.fillStyle = '#000'; bg.font = '12px "Times New Roman"'; bg.textAlign = 'right';
-            
-            // Y-Axis Ticks
             bg.fillText('0.4233', 45, 20); bg.fillText('0', 45, waveH/2 + 5); bg.fillText('-0.4233', 45, waveH - 10);
             bg.strokeStyle = '#aaa'; bg.beginPath(); bg.moveTo(50, 0); bg.lineTo(50, waveH); 
             for(let c=0; c<numChannels; c++) { let yLine = (c * (waveH/numChannels)) + (waveH/numChannels)/2; bg.moveTo(50, yLine); bg.lineTo(w, yLine); }
             bg.stroke();
-
-            // Spectrogram Labels
             bg.fillText('5000 Hz', 45, waveH + 15); bg.fillText('0 Hz', 45, waveH + specH - 5);
             bg.fillStyle = '#0000ff'; bg.fillText('800 Hz', w - 10, waveH + 15); bg.fillText('50 Hz', w - 10, waveH + specH - 5);
-            
-            // Text Details (hide on very small screens)
             if (w > 600) {
                 bg.fillStyle = '#555'; bg.font = 'italic 14px "Times New Roman"'; bg.textAlign = 'center';
                 bg.fillText('~ non-modifiable copy of sound', w/2, 20); bg.fillText('derived spectrogram', w/2, waveH + 15);
                 bg.fillStyle = '#0000ff'; bg.fillText('- - derived pitch', w/2 + 120, waveH + 15);
                 bg.fillStyle = '#008080'; bg.fillText('modifiable TextGrid', w/2 + 160, waveH + specH - 5);
             }
-            
             bg.fillStyle = '#fff'; bg.fillRect(50, waveH+specH+20, w-60, tgH-40);
         }
 
@@ -296,7 +256,6 @@
                 wCtx.clearRect(0,0,w,h); wCtx.fillStyle = '#333';
                 const sIdx = Math.floor(viewStart * audioBuffer.sampleRate), eIdx = Math.floor(viewEnd * audioBuffer.sampleRate), specW = w - 50;
                 const step = Math.max(1, Math.ceil((eIdx - sIdx) / specW)), chH = waveH / numChannels;
-                
                 for(let c=0; c<numChannels; c++) {
                     const data = channelData[c];
                     for(let i = 0; i < specW; i++) {
@@ -310,10 +269,8 @@
                 if (dur <= 10.0) {
                     const fftSize = 512, re = new Float32Array(fftSize), im = new Float32Array(fftSize), imgData = sCtx.createImageData(specW, specH);
                     const maxBin = Math.floor((5000 / (audioBuffer.sampleRate / 2)) * (fftSize / 2));
-                    const specStepSec = 0.004; // 4ms
-                    let numFFTs = Math.min(specW, Math.ceil(dur / specStepSec)), actualStep = dur / numFFTs;
+                    const specStepSec = 0.004; let numFFTs = Math.min(specW, Math.ceil(dur / specStepSec)), actualStep = dur / numFFTs;
                     const chan0 = channelData[0];
-                    
                     for (let f = 0; f < numFFTs; f++) {
                         const time = viewStart + f * actualStep, centerSamp = Math.floor(time * audioBuffer.sampleRate), startSamp = centerSamp - fftSize/2;
                         for (let i = 0; i < fftSize; i++) { let samp = startSamp + i; re[i] = (samp >= 0 && samp < chan0.length) ? chan0[samp] : 0; im[i] = 0; re[i] *= 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1))); }
@@ -360,12 +317,10 @@
         function drawTextGrid(w, waveH, specH, tgH) {
             tCtx.clearRect(0,0,w,waveH+specH+tgH); tCtx.strokeStyle = '#00a8ff'; tCtx.lineWidth = 2; tCtx.strokeRect(50, waveH+specH+20, w-60, tgH-40);
             tCtx.fillStyle = '#d35400'; tCtx.font = '14px "Times New Roman"'; tCtx.textAlign = 'right'; tCtx.fillText('1', 40, waveH+specH+45); tCtx.fillText('Vokal', w-15, waveH+specH+45);
-            
             if (selectionType === 'interval' && activeIntervalIndex !== -1) {
                 let px1 = Math.max(50, 50 + ((boundaries[activeIntervalIndex].time - viewStart) / (viewEnd - viewStart)) * (w-50)), px2 = Math.min(w, 50 + ((boundaries[activeIntervalIndex+1].time - viewStart) / (viewEnd - viewStart)) * (w-50));
                 if (px2 > 50 && px1 < w) { tCtx.fillStyle = 'rgba(255, 235, 59, 0.6)'; tCtx.fillRect(px1, waveH+specH+20, px2-px1, tgH-40); }
             }
-
             tCtx.textAlign = 'center'; tCtx.font = '20px "Times New Roman"';
             for(let i=0; i<boundaries.length; i++) {
                 let bnd = boundaries[i], px = 50 + ((bnd.time - viewStart) / (viewEnd - viewStart)) * (w-50);
@@ -396,47 +351,36 @@
         }
 
         function handleInteractStart(e) {
-            if(!audioBuffer) return;
-            const x = getOffsetX(e, intCanvas);
-            if(x < 50) return;
+            if(!audioBuffer) return; const x = getOffsetX(e, intCanvas); if(x < 50) return;
             intCanvas.focus(); isDraggingInteraction = true;
             let time = viewStart + ((x - 50) / (intCanvas.width - 50)) * (viewEnd - viewStart);
             selStart = time; selEnd = time; cursorPos = time; selectionType = 'none'; requestAnimationFrame(renderEngine);
         }
         function handleInteractMove(e) {
-            if(!isDraggingInteraction) return;
-            const x = getOffsetX(e, intCanvas);
-            if(x < 50) return;
+            if(!isDraggingInteraction) return; const x = getOffsetX(e, intCanvas); if(x < 50) return;
             selEnd = viewStart + ((x - 50) / (intCanvas.width - 50)) * (viewEnd - viewStart); cursorPos = selEnd;
             selectionType = Math.abs(selEnd - selStart) > 0.001 ? 'time' : 'none'; requestAnimationFrame(renderEngine);
         }
         function handleInteractEnd() {
-            if(!isDraggingInteraction) return;
-            isDraggingInteraction = false; 
+            if(!isDraggingInteraction) return; isDraggingInteraction = false; 
             if (selectionType !== 'time') { selectionType = 'interval'; for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
             calcAcoustics(); requestAnimationFrame(renderEngine); 
         }
 
-        intCanvas.addEventListener('mousedown', handleInteractStart);
-        intCanvas.addEventListener('mousemove', handleInteractMove);
-        intCanvas.addEventListener('mouseup', handleInteractEnd);
-        intCanvas.addEventListener('touchstart', handleInteractStart, {passive: true});
-        intCanvas.addEventListener('touchmove', handleInteractMove, {passive: true});
-        intCanvas.addEventListener('touchend', handleInteractEnd);
+        intCanvas.addEventListener('mousedown', handleInteractStart); intCanvas.addEventListener('mousemove', handleInteractMove); intCanvas.addEventListener('mouseup', handleInteractEnd);
+        intCanvas.addEventListener('touchstart', handleInteractStart, {passive: true}); intCanvas.addEventListener('touchmove', handleInteractMove, {passive: true}); intCanvas.addEventListener('touchend', handleInteractEnd);
 
         intCanvas.addEventListener('keydown', e => {
             if(!audioBuffer) return;
             if(e.key === 'Tab') { e.preventDefault(); playAudio(); } else if(e.key === 'Enter') { e.preventDefault(); addBoundary(); }
             else if(e.key.length === 1 || e.key === 'Backspace') { if(selectionType === 'interval') hiddenInput.focus(); }
         });
-
         hiddenInput.addEventListener('input', () => { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label = hiddenInput.value; requestAnimationFrame(renderEngine); } });
         function addIPA(char) { if(selectionType === 'interval' && activeIntervalIndex !== -1) { boundaries[activeIntervalIndex].label += char; hiddenInput.value = boundaries[activeIntervalIndex].label; requestAnimationFrame(renderEngine); intCanvas.focus(); } }
 
         function addBoundary() {
             if(selectionType === 'time') {
-                let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd);
-                boundaries.push({time: t1, label: ""}); boundaries.push({time: t2, label: ""}); boundaries.sort((a,b)=>a.time - b.time);
+                let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd); boundaries.push({time: t1, label: ""}); boundaries.push({time: t2, label: ""}); boundaries.sort((a,b)=>a.time - b.time);
                 for(let i=0; i<boundaries.length-1; i++) { if(Math.abs(boundaries[i].time - t1) < 0.0001) { activeIntervalIndex = i; selectionType = 'interval'; hiddenInput.value = boundaries[i].label; hiddenInput.focus(); break; } }
             } else if (cursorPos !== null) { boundaries.push({time: cursorPos, label: ""}); boundaries.sort((a,b)=>a.time - b.time); for(let i=0; i<boundaries.length-1; i++) { if(cursorPos >= boundaries[i].time && cursorPos < boundaries[i+1].time) { activeIntervalIndex = i; hiddenInput.value = boundaries[i].label || ""; hiddenInput.focus(); break; } } }
             requestAnimationFrame(renderEngine);
@@ -473,8 +417,7 @@
         
         function handleThumbStart(e) {
             if(e.target !== thumb && e.target !== track) return;
-            isDraggingThumb = true;
-            let clientX = getClientX(e);
+            isDraggingThumb = true; let clientX = getClientX(e);
             if(e.target === thumb) { thumbStartX = clientX - thumb.getBoundingClientRect().left; } 
             else { thumbStartX = thumb.offsetWidth / 2; handleThumbMove(e); }
         }
