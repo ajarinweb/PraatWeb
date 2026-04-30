@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Praat Web: La Vaguelette (Responsive Fix)</title>
+    <title>Praat Web: La Vaguelette (Final Responsive Fix)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
@@ -17,8 +17,7 @@
         .minimize { background: #ffbd2e; cursor: pointer; }
         .maximize { background: #27c93f; }
         .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
-        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
-        .menu-bar::-webkit-scrollbar { display: none; }
+        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; flex-wrap: wrap; flex-shrink: 0; }
         .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; display: inline-block; }
         .menu-item:hover { background: #007aff; color: #fff; }
         .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f0f0f0; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-direction: column; min-width: 200px; z-index: 201; }
@@ -229,18 +228,22 @@
             const bg = bgCanvas.getContext('2d'); bg.clearRect(0,0,w,h);
             bg.fillStyle = '#f5f5f0'; bg.fillRect(0, 0, w, waveH); bg.fillStyle = '#ffffff'; bg.fillRect(0, waveH, w, specH); bg.fillStyle = '#f5f5f0'; bg.fillRect(0, waveH+specH, w, tgH);
             bg.fillStyle = '#000'; bg.font = '12px "Times New Roman"'; bg.textAlign = 'right';
+            
             bg.fillText('0.4233', 45, 20); bg.fillText('0', 45, waveH/2 + 5); bg.fillText('-0.4233', 45, waveH - 10);
             bg.strokeStyle = '#aaa'; bg.beginPath(); bg.moveTo(50, 0); bg.lineTo(50, waveH); 
             for(let c=0; c<numChannels; c++) { let yLine = (c * (waveH/numChannels)) + (waveH/numChannels)/2; bg.moveTo(50, yLine); bg.lineTo(w, yLine); }
             bg.stroke();
+
             bg.fillText('5000 Hz', 45, waveH + 15); bg.fillText('0 Hz', 45, waveH + specH - 5);
             bg.fillStyle = '#0000ff'; bg.fillText('800 Hz', w - 10, waveH + 15); bg.fillText('50 Hz', w - 10, waveH + specH - 5);
+            
             if (w > 600) {
                 bg.fillStyle = '#555'; bg.font = 'italic 14px "Times New Roman"'; bg.textAlign = 'center';
                 bg.fillText('~ non-modifiable copy of sound', w/2, 20); bg.fillText('derived spectrogram', w/2, waveH + 15);
                 bg.fillStyle = '#0000ff'; bg.fillText('- - derived pitch', w/2 + 120, waveH + 15);
                 bg.fillStyle = '#008080'; bg.fillText('modifiable TextGrid', w/2 + 160, waveH + specH - 5);
             }
+            
             bg.fillStyle = '#fff'; bg.fillRect(50, waveH+specH+20, w-60, tgH-40);
         }
 
@@ -256,6 +259,7 @@
                 wCtx.clearRect(0,0,w,h); wCtx.fillStyle = '#333';
                 const sIdx = Math.floor(viewStart * audioBuffer.sampleRate), eIdx = Math.floor(viewEnd * audioBuffer.sampleRate), specW = w - 50;
                 const step = Math.max(1, Math.ceil((eIdx - sIdx) / specW)), chH = waveH / numChannels;
+                
                 for(let c=0; c<numChannels; c++) {
                     const data = channelData[c];
                     for(let i = 0; i < specW; i++) {
@@ -271,6 +275,7 @@
                     const maxBin = Math.floor((5000 / (audioBuffer.sampleRate / 2)) * (fftSize / 2));
                     const specStepSec = 0.004; let numFFTs = Math.min(specW, Math.ceil(dur / specStepSec)), actualStep = dur / numFFTs;
                     const chan0 = channelData[0];
+                    
                     for (let f = 0; f < numFFTs; f++) {
                         const time = viewStart + f * actualStep, centerSamp = Math.floor(time * audioBuffer.sampleRate), startSamp = centerSamp - fftSize/2;
                         for (let i = 0; i < fftSize; i++) { let samp = startSamp + i; re[i] = (samp >= 0 && samp < chan0.length) ? chan0[samp] : 0; im[i] = 0; re[i] *= 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1))); }
@@ -310,6 +315,7 @@
                 }
                 viewNeedsFullRender = false;
             }
+
             drawTextGrid(w, waveH, specH, tgH);
             drawInteraction(w, h, waveH, specH);
         }
@@ -317,10 +323,12 @@
         function drawTextGrid(w, waveH, specH, tgH) {
             tCtx.clearRect(0,0,w,waveH+specH+tgH); tCtx.strokeStyle = '#00a8ff'; tCtx.lineWidth = 2; tCtx.strokeRect(50, waveH+specH+20, w-60, tgH-40);
             tCtx.fillStyle = '#d35400'; tCtx.font = '14px "Times New Roman"'; tCtx.textAlign = 'right'; tCtx.fillText('1', 40, waveH+specH+45); tCtx.fillText('Vokal', w-15, waveH+specH+45);
+            
             if (selectionType === 'interval' && activeIntervalIndex !== -1) {
                 let px1 = Math.max(50, 50 + ((boundaries[activeIntervalIndex].time - viewStart) / (viewEnd - viewStart)) * (w-50)), px2 = Math.min(w, 50 + ((boundaries[activeIntervalIndex+1].time - viewStart) / (viewEnd - viewStart)) * (w-50));
                 if (px2 > 50 && px1 < w) { tCtx.fillStyle = 'rgba(255, 235, 59, 0.6)'; tCtx.fillRect(px1, waveH+specH+20, px2-px1, tgH-40); }
             }
+
             tCtx.textAlign = 'center'; tCtx.font = '20px "Times New Roman"';
             for(let i=0; i<boundaries.length; i++) {
                 let bnd = boundaries[i], px = 50 + ((bnd.time - viewStart) / (viewEnd - viewStart)) * (w-50);
