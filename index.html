@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Praat Web: La Vaguelette (IPA & Keyboard Fix)</title>
+    <title>Praat Web: La Vaguelette (Final UX Edition)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; user-select: none; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; position: fixed; }
@@ -17,7 +17,8 @@
         .minimize { background: #ffbd2e; cursor: pointer; }
         .maximize { background: #27c93f; }
         .window-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 0.8rem; font-weight: 500; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
-        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; flex-wrap: wrap; flex-shrink: 0; }
+        .menu-bar { background: #f0f0f0; min-height: 26px; display: flex; align-items: center; padding: 0 5px; border-bottom: 1px solid #ccc; font-size: 0.8rem; position: relative; z-index: 200; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
+        .menu-bar::-webkit-scrollbar { display: none; }
         .menu-item { padding: 4px 10px; cursor: pointer; position: relative; color: #000; display: inline-block; }
         .menu-item:hover, .menu-item.active-menu { background: #007aff; color: #fff; border-radius: 4px; }
         .dropdown { display: none; position: absolute; top: 100%; left: 0; background: #f0f0f0; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.2); flex-direction: column; min-width: 200px; z-index: 201; border-radius: 4px; }
@@ -37,7 +38,9 @@
         .controls-row { display: flex; align-items: center; justify-content: center; padding: 5px 10px; gap: 5px; flex-wrap: wrap; min-height: 35px; }
         .nav-btn { background: #f5f5f5; border: 1px solid #999; padding: 4px 10px; font-size: 0.75rem; border-radius: 3px; cursor: pointer; color: #000; touch-action: manipulation; }
         .nav-btn:hover { background: #e0e0e0; }
-        .scrollbar-track { flex: 1; min-width: 120px; height: 18px; background: #ddd; border: 1px solid #999; margin: 2px 5px; position: relative; border-radius: 9px; cursor: pointer; touch-action: none; }
+        .step-btn { background: #ddd; border: 1px solid #999; width: 22px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; border-radius: 4px; cursor: pointer; color: #333; margin: 0 2px; }
+        .step-btn:hover { background: #ccc; }
+        .scrollbar-track { flex: 1; min-width: 100px; height: 18px; background: #ddd; border: 1px solid #999; margin: 2px 2px; position: relative; border-radius: 9px; cursor: pointer; touch-action: none; }
         .scrollbar-thumb { position: absolute; top: 0; height: 100%; background: #999; border-radius: 8px; }
         .total-dur-txt { font-size: 0.75rem; margin-left: 5px; white-space: nowrap; }
         .floating-panel { position: absolute; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 100; display: flex; flex-direction: column; font-family: -apple-system, sans-serif; overflow: hidden; max-width: 90vw; }
@@ -54,6 +57,7 @@
         .ipa-btn:hover { background: #007aff; color: #fff; border-color: #007aff; }
         .data-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid #eee; gap: 10px; }
         .data-val { font-weight: 600; color: #d35400; font-family: monospace; white-space: nowrap; }
+        .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
         .file-inputs { display: none; }
     </style>
 </head>
@@ -111,7 +115,9 @@
                     <button class="nav-btn" onclick="zoomOut()">out</button>
                     <button class="nav-btn" onclick="zoomSel()">sel</button>
                     <button class="nav-btn" onclick="zoomBak()">bak</button>
+                    <div class="step-btn" onclick="stepScroll(-1)">&#9664;</div>
                     <div class="scrollbar-track" id="scrollTrack"><div class="scrollbar-thumb" id="scrollThumb" style="width: 100%; left: 0;"></div></div>
+                    <div class="step-btn" onclick="stepScroll(1)">&#9654;</div>
                     <div class="total-dur-txt" id="t-total">Total 0.000000 s</div>
                 </div>
             </div>
@@ -181,7 +187,7 @@
             if(!e.target.closest('.menu-item')) document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active-menu'));
         });
 
-        // Utilities for mouse & touch
+        // Utilities
         function getClientX(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX; }
         function getClientY(e) { return e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY; }
         function getOffsetX(e, elem) { if(e.touches && e.touches.length > 0) { const rect = elem.getBoundingClientRect(); return e.touches[0].clientX - rect.left; } return e.offsetX; }
@@ -194,6 +200,9 @@
         let audioCtx, audioBuffer, channelData = [], numChannels = 1;
         let viewStart = 0, viewEnd = 1, totalDur = 1, viewHistory = [], viewNeedsFullRender = true;
         let selectionType = 'none', selStart = 0, selEnd = 0, cursorPos = null, activeIntervalIndex = -1, boundaries = [], sourceNode = null, isDraggingInteraction = false;
+        
+        // Playhead variables
+        let playheadReq = null, playStartTime = 0, playStartOffset = 0, playDuration = 0, isPlaying = false;
 
         // Auto-save logic
         function saveToLocal() { if(boundaries.length >= 2) localStorage.setItem('praat_web_autosave', JSON.stringify({b: boundaries, d: totalDur})); }
@@ -433,15 +442,37 @@
         function drawInteraction(w, h, waveH, specH) {
             iCtx.clearRect(0,0,w,h);
             if (selectionType === 'time') {
-                let px1 = 50 + ((Math.min(selStart, selEnd) - viewStart) / (viewEnd - viewStart)) * (w-50), px2 = 50 + ((Math.max(selStart, selEnd) - viewStart) / (viewEnd - viewStart)) * (w-50);
+                let t1 = Math.min(selStart, selEnd), t2 = Math.max(selStart, selEnd);
+                let px1 = 50 + ((t1 - viewStart) / (viewEnd - viewStart)) * (w-50), px2 = 50 + ((t2 - viewStart) / (viewEnd - viewStart)) * (w-50);
                 iCtx.fillStyle = 'rgba(255, 192, 203, 0.4)'; iCtx.fillRect(Math.max(50, px1), 0, px2-px1, waveH+specH);
                 iCtx.strokeStyle = 'red'; iCtx.setLineDash([4,4]); iCtx.beginPath();
                 if(px1 >= 50) { iCtx.moveTo(px1, 0); iCtx.lineTo(px1, waveH+specH); }
                 if(px2 <= w) { iCtx.moveTo(px2, 0); iCtx.lineTo(px2, waveH+specH); }
                 iCtx.stroke(); iCtx.setLineDash([]);
+                
+                // Time indicators for selection
+                iCtx.fillStyle = 'red'; iCtx.font = '12px "Times New Roman"'; iCtx.textAlign = 'center';
+                if(px1 >= 50) iCtx.fillText(t1.toFixed(6), px1, 15);
+                if(px2 <= w) iCtx.fillText(t2.toFixed(6), px2, 15);
+                let midPx = px1 + (px2-px1)/2;
+                if(midPx >= 50 && midPx <= w) iCtx.fillText((t2-t1).toFixed(6), midPx, waveH + specH - 10);
             } else if (cursorPos !== null) {
                 let px = 50 + ((cursorPos - viewStart) / (viewEnd - viewStart)) * (w-50);
-                if(px >= 50) { iCtx.strokeStyle = 'red'; iCtx.setLineDash([4,4]); iCtx.beginPath(); iCtx.moveTo(px, 0); iCtx.lineTo(px, h); iCtx.stroke(); iCtx.setLineDash([]); }
+                if(px >= 50) { 
+                    iCtx.strokeStyle = 'red'; iCtx.setLineDash([4,4]); iCtx.beginPath(); iCtx.moveTo(px, 0); iCtx.lineTo(px, h); iCtx.stroke(); iCtx.setLineDash([]); 
+                    iCtx.fillStyle = 'red'; iCtx.font = '12px "Times New Roman"'; iCtx.textAlign = 'center'; iCtx.fillText(cursorPos.toFixed(6), px, 15);
+                }
+            }
+            
+            // Draw Playhead
+            if(isPlaying) {
+                let currentOffset = playStartOffset + (audioCtx.currentTime - playStartTime);
+                if(currentOffset <= playStartOffset + playDuration) {
+                    let px = 50 + ((currentOffset - viewStart) / (viewEnd - viewStart)) * (w - 50);
+                    if(px >= 50 && px <= w) {
+                        iCtx.strokeStyle = '#27c93f'; iCtx.lineWidth = 2; iCtx.beginPath(); iCtx.moveTo(px, 0); iCtx.lineTo(px, h); iCtx.stroke();
+                    }
+                }
             }
         }
 
@@ -518,11 +549,22 @@
         }
 
         function playAudio() {
-            if(!audioCtx || !audioBuffer) return; if(audioCtx.state === 'suspended') audioCtx.resume(); if(sourceNode) sourceNode.stop();
+            if(!audioCtx || !audioBuffer) return; if(audioCtx.state === 'suspended') audioCtx.resume(); 
+            if(sourceNode) { sourceNode.stop(); cancelAnimationFrame(playheadReq); }
             sourceNode = audioCtx.createBufferSource(); sourceNode.buffer = audioBuffer; sourceNode.connect(audioCtx.destination);
             let pStart = viewStart, pDur = viewEnd - viewStart;
             if(selectionType === 'time') { pStart = Math.min(selStart, selEnd); pDur = Math.abs(selEnd - selStart); } else if(selectionType === 'interval' && activeIntervalIndex !== -1) { pStart = boundaries[activeIntervalIndex].time; pDur = boundaries[activeIntervalIndex+1].time - pStart; } else if(cursorPos !== null) { pStart = cursorPos; pDur = viewEnd - cursorPos; }
+            
+            playStartTime = audioCtx.currentTime; playStartOffset = pStart; playDuration = pDur; isPlaying = true;
             sourceNode.start(0, pStart, pDur);
+            sourceNode.onended = () => { isPlaying = false; requestAnimationFrame(renderEngine); };
+            animatePlayhead();
+        }
+
+        function animatePlayhead() {
+            if(!isPlaying) return;
+            requestAnimationFrame(renderEngine);
+            playheadReq = requestAnimationFrame(animatePlayhead);
         }
 
         function saveView() { viewHistory.push({s: viewStart, e: viewEnd}); }
@@ -531,6 +573,15 @@
         function zoomOut() { saveView(); let dur = (viewEnd - viewStart)*2, mid = viewStart + dur/4; viewStart = Math.max(0, mid - dur/2); viewEnd = Math.min(totalDur, mid + dur/2); updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); }
         function zoomSel() { if(selectionType === 'time') { saveView(); viewStart = Math.min(selStart, selEnd); viewEnd = Math.max(selStart, selEnd); updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } else if(selectionType === 'interval' && activeIntervalIndex !== -1) { saveView(); viewStart = boundaries[activeIntervalIndex].time; viewEnd = boundaries[activeIntervalIndex+1].time; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } }
         function zoomBak() { if(viewHistory.length > 0) { let v = viewHistory.pop(); viewStart = v.s; viewEnd = v.e; updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine); } }
+
+        function stepScroll(dir) {
+            if(!totalDur) return;
+            let dur = viewEnd - viewStart; let shift = dur * 0.1 * dir;
+            viewStart += shift; viewEnd += shift;
+            if(viewStart < 0) { viewStart = 0; viewEnd = dur; }
+            if(viewEnd > totalDur) { viewEnd = totalDur; viewStart = totalDur - dur; }
+            updateScrollbar(); viewNeedsFullRender = true; requestAnimationFrame(renderEngine);
+        }
 
         const track = document.getElementById('scrollTrack'), thumb = document.getElementById('scrollThumb');
         let isDraggingThumb = false, thumbStartX;
